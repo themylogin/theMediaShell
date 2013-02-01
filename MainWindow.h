@@ -39,19 +39,19 @@ public:
             {
                 background-color: rgb(17, 9, 15);
                 color: rgb(166, 164, 166);
-                font: 46pt "Segoe UI";
+                font: 60px "Segoe UI";
             }
             QTabBar::tab
             {
                 border: none;
                 padding: 12px 0 0 25px;
-                font: 36pt "Segoe UI";
+                font: 48px "Segoe UI";
             }
             QTabBar::tab:selected
             {
                 color: rgb(240, 241, 240);
                 padding: 0px 0 0 25px;
-                font: 46pt "Segoe UI";
+                font: 60px "Segoe UI";
             }
 
             /***/
@@ -59,7 +59,7 @@ public:
             {
                 border: none;
                 outline: none;
-                font: 26pt "Segoe UI";
+                font: 35px "Segoe UI";
                 selection-background-color: #fff;
             }
             QTableView
@@ -138,10 +138,10 @@ protected:
     template<typename T>
     void suitUpView(T* view)
     {
-        view->setColumnWidth(0, 1380);  // Name
+        view->setColumnWidth(0, 1430);  // Name
         view->setColumnWidth(1, 200);   // Size
         view->setColumnHidden(2, true); // Type
-        view->setColumnWidth(3, 300);   // Date Modified
+        view->setColumnWidth(3, 250);   // Date Modified
 
         view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);

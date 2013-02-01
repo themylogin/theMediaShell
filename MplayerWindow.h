@@ -41,7 +41,7 @@ public:
             {
                 background-color: rgb(0, 138, 0);
                 color: rgb(240, 241, 240);
-                font: 26pt "Segoe UI";
+                font: 35px "Segoe UI";
             }
 
             QTableView
@@ -61,7 +61,7 @@ public:
         this->title = title;
         this->titleLabel = new QLabel(this);
         this->titleLabel->setText(this->title);
-        this->titleLabel->setStyleSheet("QLabel { font: 36pt \"Segoe UI\"; }");
+        this->titleLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; }");
         this->layout->addWidget(this->titleLabel);
 
         this->playlist = new PlaylistModel(this);
