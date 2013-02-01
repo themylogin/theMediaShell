@@ -11,8 +11,10 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = theMediaShell
 TEMPLATE = app
 
+LIBS += -lX11
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    Application.cpp
 
 HEADERS  += MainWindow.h \
     MediaModel.h \
@@ -22,7 +24,8 @@ HEADERS  += MainWindow.h \
     FlatMediaModel.h \
     MplayerWindow.h \
     PlaylistItem.h \
-    PlaylistModel.h
+    PlaylistModel.h \
+    Application.h
 
 FORMS    +=
 
