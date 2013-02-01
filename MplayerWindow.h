@@ -17,6 +17,7 @@
 #include <QRegExp>
 #include <QStringList>
 #include <QTableView>
+#include <QTableWidget>
 #include <QTimer>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -44,7 +45,7 @@ public:
                 font: 35px "Segoe UI";
             }
 
-            QTableView
+            QTableView, QTableWidget
             {
                 border: none;
                 outline: none;
@@ -62,6 +63,7 @@ public:
         this->titleLabel = new QLabel(this);
         this->titleLabel->setText(this->title);
         this->titleLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; }");
+        this->titleLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
         this->layout->addWidget(this->titleLabel);
 
         this->playlist = new PlaylistModel(this);
@@ -83,9 +85,37 @@ public:
         this->playlistView->setColumnWidth(1, 90);
         this->playlistView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         this->playlistView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        this->layout->addWidget(this->playlistView);
+        this->playlistView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        this->layout->addWidget(this->playlistView, 1);
 
-        this->layout->addStretch();
+        this->helpLabel = new QLabel(this);
+        this->helpLabel->setText(QString::fromUtf8("Комбинации клавиш"));
+        this->helpLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; }");
+        this->helpLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->layout->addWidget(this->helpLabel);
+
+        this->helpTable = new QTableWidget(this);
+        this->helpTable->horizontalHeader()->hide();
+        this->helpTable->verticalHeader()->hide();
+        this->helpTable->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
+        this->helpTable->setShowGrid(false);
+        this->helpTable->setColumnWidth(0, 90);
+        this->helpTable->setColumnWidth(1, 530);
+        this->helpTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        this->helpTable->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        this->helpTable->setColumnCount(2);
+        this->helpTable->setRowCount(4);
+        this->helpTable->setItem(0, 0, new QTableWidgetItem(QString::fromUtf8("#")));
+        this->helpTable->setItem(0, 1, new QTableWidgetItem(QString::fromUtf8("Выбор аудиодорожки")));
+        this->helpTable->setItem(1, 0, new QTableWidgetItem(QString::fromUtf8("-/+")));
+        this->helpTable->setItem(1, 1, new QTableWidgetItem(QString::fromUtf8("Задержка аудиодорожки")));
+        this->helpTable->setItem(2, 0, new QTableWidgetItem(QString::fromUtf8("j")));
+        this->helpTable->setItem(2, 1, new QTableWidgetItem(QString::fromUtf8("Выбор субтитров")));
+        this->helpTable->setItem(3, 0, new QTableWidgetItem(QString::fromUtf8("z/x")));
+        this->helpTable->setItem(3, 1, new QTableWidgetItem(QString::fromUtf8("Задержка субтитров")));
+        this->helpTable->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        this->layout->addWidget(this->helpTable);
+
         this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint);        
         this->setFixedSize(640, 1080);
         this->move(1280, 0);
@@ -120,6 +150,9 @@ private:
 
     PlaylistModel* playlist;
     QTableView* playlistView;
+
+    QLabel* helpLabel;
+    QTableWidget* helpTable;
 
     QTimer timer;
     QProcess process;
