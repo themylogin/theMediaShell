@@ -47,9 +47,9 @@ if __name__ == "__main__":
 
     session.execute("""
         INSERT INTO content_item
-        (type, type_key, created_at, public, data)
+        (type, type_key, created_at, permissions, data)
         VALUES
-        (:source, :source_id, :datetime, 1, :data)
+        (:source, :source_id, :datetime, 0, :data)
     """, params={
         "source"    : "movie",
         "source_id" : end,
