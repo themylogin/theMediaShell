@@ -9,6 +9,7 @@
 #include <QStringList>
 #include <QTableView>
 #include <QTabWidget>
+#include <QTimer>
 #include <QTreeView>
 
 #include "ExtensionMediaClassificator.h"
@@ -109,11 +110,15 @@ public:
         this->moviesModel = new MediaModel("/home/themylogin/Torrent/downloads", this->moviesClassificator, this);
         this->moviesView = new QTreeView(this->tabWidget);
         this->moviesView->setModel(this->moviesModel);
-        this->moviesView->setRootIndex(this->moviesModel->rootIndex());
         this->moviesView->setHeaderHidden(true);
         this->suitUpView(this->moviesView);
         connect(this->moviesView, SIGNAL(activated(QModelIndex)), this, SLOT(movieActivated(QModelIndex)));
         this->tabWidget->addTab(this->moviesView, QString::fromUtf8("Фильмы"));
+
+        // Delaying this somehow prevents startup crashes in QSortFilterProxyModel::parent()
+        this->setMoviesViewRootIndexTimer = new QTimer(this);
+        connect(this->setMoviesViewRootIndexTimer, SIGNAL(timeout()), this, SLOT(setMoviesViewRootIndex()));
+        this->setMoviesViewRootIndexTimer->start();
 
         this->newMoviesModel = new NewMediaModel(this->moviesModel, this);
         this->newMoviesView = new QTableView(this->tabWidget);
@@ -177,7 +182,14 @@ private:
     NewMediaModel* newMoviesModel;
     QTableView* newMoviesView;
 
+    QTimer* setMoviesViewRootIndexTimer;
+
 private slots:
+    void setMoviesViewRootIndex()
+    {
+        this->moviesView->setRootIndex(this->moviesModel->rootIndex());
+    }
+
     void movieActivated(QModelIndex movie)
     {
         QString title;

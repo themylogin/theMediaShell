@@ -17,7 +17,7 @@ public:
     {
         this->fsModel = new QFileSystemModel;
         this->fsModel->setRootPath(rootPath);
-        this->setSourceModel(fsModel);
+        this->setSourceModel(this->fsModel);
 
         this->classificator = classificator;
 
