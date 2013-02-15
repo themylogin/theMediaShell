@@ -6,6 +6,7 @@
 #include <QSortFilterProxyModel>
 
 #include "MediaClassificator.h"
+#include "MediaConsumptionHistory.h"
 
 class MediaModel : public QSortFilterProxyModel
 {
@@ -40,6 +41,28 @@ public:
             else
             {
                 return Qt::AlignLeft;
+            }
+        }
+
+        /*
+        // Reuse "checked state" as "watched state"
+        // As stated in http://stackoverflow.com/questions/14642254/styling-qt-model-view-items-based-on-their-itemdatarole-properties, this is the only way to style it via stylesheet
+        if (role == Qt::CheckStateRole)
+        {
+            MediaConsumptionHistory history;
+            if (history.contains(this->filePath(index)))
+            {
+                return Qt::Checked;
+            }
+        }
+        */
+        // HACK: QTreeView::item:checked does not work, this is temporary solution
+        if (role == Qt::ForegroundRole)
+        {
+            MediaConsumptionHistory history;
+            if (history.contains(this->filePath(index)))
+            {
+                return QColor(120, 120, 120);
             }
         }
 

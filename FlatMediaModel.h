@@ -31,6 +31,7 @@ public:
 
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const
     {
+        Q_UNUSED(parent);
         return this->createIndex(row, column);
     }
 

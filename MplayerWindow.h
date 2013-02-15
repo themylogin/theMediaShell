@@ -26,6 +26,7 @@
 
 #include <QxtGlobalShortcut>
 
+#include "MediaConsumptionHistory.h"
 #include "PlaylistItem.h"
 #include "PlaylistModel.h"
 
@@ -125,7 +126,7 @@ public:
 
         connect(&this->timer, SIGNAL(timeout()), this, SLOT(notifyPlaylist()));
         connect(&this->process, SIGNAL(readyReadStandardOutput()), this, SLOT(readProcessStandardOutput()));
-        connect(&this->process, SIGNAL(finished(int)), this, SLOT(playNext()));
+        connect(&this->process, SIGNAL(finished(int)), this, SLOT(processFinished()));
         this->progress = 0;
 
         this->timer.start(1000);
@@ -213,13 +214,17 @@ private slots:
         }
     }
 
-    void playNext()
+    void processFinished()
     {
+        MediaConsumptionHistory history;
+        history.set(this->playlist->getFrontItem()->file, this->progress);
+
         QProcess* hook = new QProcess;
         hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",
                     QStringList() << this->playlist->getFrontItem()->file
                                   << QString::number(this->startedAt.toTime_t())
                                   << QString::number(QDateTime::currentDateTime().toTime_t()));
+
         this->playlist->popFrontItem();
         this->play();
     }

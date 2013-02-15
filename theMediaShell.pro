@@ -25,7 +25,8 @@ HEADERS  += MainWindow.h \
     MplayerWindow.h \
     PlaylistItem.h \
     PlaylistModel.h \
-    Application.h
+    Application.h \
+    MediaConsumptionHistory.h
 
 FORMS    +=
 

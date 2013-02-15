@@ -72,6 +72,15 @@ public:
                 background-color: rgb(17, 9, 15);
                 color: rgb(240, 241, 240);
             }
+            QTreeView::indicator:checked, QTableView::indicator:checked
+            {
+                image: none;
+                color: rgb(120, 120, 120);
+            }
+            QTreeView::item:checked, QTableView::item:checked
+            {
+                color: rgb(120, 120, 120);
+            }
 
             QTreeView::branch {
                 background: palette(base);
@@ -188,6 +197,7 @@ private slots:
     void setMoviesViewRootIndex()
     {
         this->moviesView->setRootIndex(this->moviesModel->rootIndex());
+        this->setMoviesViewRootIndexTimer->stop();
     }
 
     void movieActivated(QModelIndex movie)
