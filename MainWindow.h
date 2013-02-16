@@ -278,7 +278,7 @@ private slots:
         }
 
         MplayerWindow* mplayer = new MplayerWindow(title, playlist);
-        mplayer->show();
+        Q_UNUSED(mplayer);
     }
 };
 

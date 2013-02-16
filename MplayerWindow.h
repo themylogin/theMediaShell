@@ -120,8 +120,8 @@ public:
 
         this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint);        
         this->setFixedSize(640, 1080);
-        this->move(1280, 0);
-        this->show();
+        this->QWidget::show();
+        this->hide();
 
         QtConcurrent::run(this, &MplayerWindow::determineDurations, playlist);
 
@@ -144,6 +144,22 @@ public:
         connect(this->planMoreShortcut, SIGNAL(activated()), this, SLOT(planMore()));
     }
 
+    void hide()
+    {
+        // QApplication::lastWindowClosed() is emited when the last VISIBLE primary window is closed, so this should always be "visible"
+        this->move(1920, 0);
+    }
+
+    void show()
+    {
+        this->move(1280, 0);
+    }
+
+    bool isVisible() const
+    {
+        return this->pos().x() == 1280;
+    }
+
 protected:
     void closeEvent(QCloseEvent* event)
     {
@@ -157,7 +173,7 @@ protected:
                     this->closeTimer.start(100);
                 }
                 event->ignore();                
-                this->setFixedSize(1, 1); // Can't call this->hide() because QApplication::lastWindowClosed() is emited when the last VISIBLE primary window is closed
+                this->hide();
                 return;
             }
         }
