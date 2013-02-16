@@ -6,6 +6,7 @@
 #include <QHeaderView>
 #include <QKeyEvent>
 #include <QMainWindow>
+#include <QSignalMapper>
 #include <QStringList>
 #include <QTableView>
 #include <QTabWidget>
@@ -116,6 +117,11 @@ public:
         this->tabWidget->setFocusPolicy(Qt::NoFocus);
         this->setCentralWidget(tabWidget);
 
+        this->focusFirstItemMapper = new QSignalMapper(this);
+        connect(this->focusFirstItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(focusFirstItem(QObject*)));
+        this->scrollToCurrentItemMapper = new QSignalMapper(this);
+        connect(this->scrollToCurrentItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(scrollToCurrentItem(QObject*)));
+
         this->moviesClassificator = new ExtensionMediaClassificator;
         this->moviesClassificator->addExtension("avi");
         this->moviesClassificator->addExtension("mkv");
@@ -166,12 +172,15 @@ protected:
         view->setIconSize(QSize(32, 32));
 
         view->installEventFilter(this);
+
+        this->focusFirstItemMapper->setMapping((QObject*)view->model(), (QObject*)view);
+        connect(view->model(), SIGNAL(layoutChanged()), this->focusFirstItemMapper, SLOT(map()));
+        this->scrollToCurrentItemMapper->setMapping((QObject*)view->model(), (QObject*)view);
+        connect(view->model(), SIGNAL(layoutChanged()), this->scrollToCurrentItemMapper, SLOT(map()));
     }
 
     bool eventFilter(QObject* object, QEvent* event)
     {
-        Q_UNUSED(object);
-
         if (event->type() == QEvent::KeyPress)
         {
             QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
@@ -179,6 +188,15 @@ protected:
             {
                 this->tabWidget->setCurrentIndex((this->tabWidget->currentIndex() + 1) % this->tabWidget->count());
                 return true;
+            }
+        }
+
+        QAbstractItemView* view = qobject_cast<QAbstractItemView*>(object);
+        if (view)
+        {
+            if (event->type() == QEvent::KeyPress)
+            {
+                this->focusFirstItemMapper->removeMappings(view->model());
             }
         }
 
@@ -196,12 +214,26 @@ private:
     QTableView* newMoviesView;
 
     QTimer* setMoviesViewRootIndexTimer;
+    QSignalMapper* focusFirstItemMapper;
+    QSignalMapper* scrollToCurrentItemMapper;
 
 private slots:
     void setMoviesViewRootIndex()
     {
         this->moviesView->setRootIndex(this->moviesModel->rootIndex());
         this->setMoviesViewRootIndexTimer->stop();
+    }
+
+    void focusFirstItem(QObject* object)
+    {
+        auto view = qobject_cast<QAbstractItemView*>(object);
+        view->setCurrentIndex(view->model()->index(0, 0, view->rootIndex()));
+    }
+
+    void scrollToCurrentItem(QObject* object)
+    {
+        auto view = qobject_cast<QAbstractItemView*>(object);
+        view->scrollTo(view->currentIndex());
     }
 
     void movieActivated(QModelIndex movie)

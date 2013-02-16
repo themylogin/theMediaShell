@@ -115,7 +115,7 @@ protected:
         // Directory
         if (this->fsModel->isDir(sourceIndex))
         {
-            return this->countChildren(sourceIndex) > 0;
+            return this->anyChildrenIs(sourceIndex) > 0;
         }
         // File
         return this->is(sourceIndex);
@@ -130,26 +130,32 @@ private:
         return this->classificator->is(this->fsModel->filePath(sourceIndex));
     }
 
-    int countChildren(const QModelIndex& sourceIndex) const
+    bool anyChildrenIs(const QModelIndex& sourceIndex) const
     {
-        int count = 0;
         this->fsModel->fetchMore(sourceIndex);
+        for (int i = 0; i < this->fsModel->rowCount(sourceIndex); i++)
+        {
+            QModelIndex sourceChildIndex = this->fsModel->index(i, 0, sourceIndex);
+            if (!this->fsModel->isDir(sourceChildIndex))
+            {
+                if (this->is(sourceChildIndex))
+                {
+                    return true;
+                }
+            }
+        }
         for (int i = 0; i < this->fsModel->rowCount(sourceIndex); i++)
         {
             QModelIndex sourceChildIndex = this->fsModel->index(i, 0, sourceIndex);
             if (this->fsModel->isDir(sourceChildIndex))
             {
-                count += this->countChildren(sourceChildIndex);
-            }
-            else
-            {
-                if (this->is(sourceChildIndex))
+                if (this->anyChildrenIs(sourceChildIndex))
                 {
-                    count += 1;
+                    return true;
                 }
             }
         }
-        return count;
+        return false;
     }
 };
 
