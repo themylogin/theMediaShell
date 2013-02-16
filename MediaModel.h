@@ -32,6 +32,14 @@ public:
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const
     {
+        if (role == Qt::DisplayRole)
+        {
+            if (index.column() == 3)
+            {
+                return this->fsModel->lastModified(this->mapToSource(index)).toString("dd.MM.yyyy hh:mm");
+            }
+        }
+
         if (role == Qt::TextAlignmentRole)
         {
             if (index.column() == 1)

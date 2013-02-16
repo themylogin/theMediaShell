@@ -67,6 +67,10 @@ public:
             {
                 margin-left: 20px;
             }
+            QTreeView::item, QTableView::item
+            {
+                padding-right: 20px;
+            }
             QTreeView::item:selected, QTableView::item:selected
             {
                 background-color: rgb(17, 9, 15);
@@ -155,7 +159,7 @@ protected:
         view->setColumnWidth(0, 1430);  // Name
         view->setColumnWidth(1, 200);   // Size
         view->setColumnHidden(2, true); // Type
-        view->setColumnWidth(3, 250);   // Date Modified
+        view->setColumnWidth(3, 270);   // Date Modified
 
         view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
