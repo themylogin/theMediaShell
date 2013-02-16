@@ -6,6 +6,7 @@
 
 #include <qapplication.h>
 
+#include <QCloseEvent>
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
@@ -143,6 +144,28 @@ public:
         connect(this->planMoreShortcut, SIGNAL(activated()), this, SLOT(planMore()));
     }
 
+protected:
+    void closeEvent(QCloseEvent* event)
+    {
+        foreach (auto hook, this->hooks)
+        {
+            if (hook->state() != QProcess::NotRunning)
+            {
+                if (!this->closeTimer.isActive())
+                {
+                    connect(&this->closeTimer, SIGNAL(timeout()), this, SLOT(close()));
+                    this->closeTimer.start(100);
+                }
+                event->ignore();                
+                this->setFixedSize(1, 1); // Can't call this->hide() because QApplication::lastWindowClosed() is emited when the last VISIBLE primary window is closed
+                return;
+            }
+        }
+
+        this->closeTimer.stop();
+        event->accept();
+    }
+
 private:
     QVBoxLayout* layout;
 
@@ -163,6 +186,10 @@ private:
     QxtGlobalShortcut* toggleShortcut;
     QxtGlobalShortcut* planLessShortcut;
     QxtGlobalShortcut* planMoreShortcut;
+
+    QList<QProcess*> hooks;
+
+    QTimer closeTimer;
 
     void determineDurations(QStringList playlist)
     {
@@ -224,6 +251,7 @@ private slots:
                     QStringList() << this->playlist->getFrontItem()->file
                                   << QString::number(this->startedAt.toTime_t())
                                   << QString::number(QDateTime::currentDateTime().toTime_t()));
+        this->hooks.append(hook);
 
         this->playlist->popFrontItem();
         this->play();

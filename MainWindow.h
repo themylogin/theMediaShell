@@ -135,9 +135,7 @@ public:
         this->tabWidget->addTab(this->moviesView, QString::fromUtf8("Фильмы"));
 
         // Delaying this somehow prevents startup crashes in QSortFilterProxyModel::parent()
-        this->setMoviesViewRootIndexTimer = new QTimer(this);
-        connect(this->setMoviesViewRootIndexTimer, SIGNAL(timeout()), this, SLOT(setMoviesViewRootIndex()));
-        this->setMoviesViewRootIndexTimer->start();
+        QTimer::singleShot(0, this, SLOT(setMoviesViewRootIndex()));
 
         this->newMoviesModel = new NewMediaModel(this->moviesModel, this);
         this->newMoviesView = new QTableView(this->tabWidget);
@@ -239,7 +237,6 @@ private:
     NewMediaModel* newMoviesModel;
     QTableView* newMoviesView;
 
-    QTimer* setMoviesViewRootIndexTimer;
     QSignalMapper* focusFirstItemMapper;
     QSignalMapper* scrollToCurrentItemMapper;
 
@@ -247,7 +244,6 @@ private slots:
     void setMoviesViewRootIndex()
     {
         this->moviesView->setRootIndex(this->moviesModel->rootIndex());
-        this->setMoviesViewRootIndexTimer->stop();
     }
 
     void focusFirstItem(QObject* object)
