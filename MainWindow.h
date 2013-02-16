@@ -197,6 +197,32 @@ protected:
             if (event->type() == QEvent::KeyPress)
             {
                 this->focusFirstItemMapper->removeMappings(view->model());
+
+                QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
+                if (keyEvent->key() == Qt::Key_Down)
+                {
+                    int y = view->visualRect(view->currentIndex()).top() + 49 * 5;
+                    if (y > view->viewport()->rect().top())
+                    {
+                        QModelIndex itemProvidesConfidence = view->indexAt(QPoint(view->viewport()->rect().left(), y));
+                        if (itemProvidesConfidence.isValid())
+                        {
+                            view->scrollTo(itemProvidesConfidence);
+                        }
+                    }
+                }
+                if (keyEvent->key() == Qt::Key_Up)
+                {
+                    int y = view->visualRect(view->currentIndex()).top() - 49 * 5;
+                    if (y < view->viewport()->rect().top())
+                    {
+                        QModelIndex itemProvidesConfidence = view->indexAt(QPoint(view->viewport()->rect().left(), y));
+                        if (itemProvidesConfidence.isValid())
+                        {
+                            view->scrollTo(itemProvidesConfidence);
+                        }
+                    }
+                }
             }
         }
 
