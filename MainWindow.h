@@ -260,25 +260,39 @@ private slots:
 
     void movieActivated(QModelIndex movie)
     {
-        QString title;
-        QStringList playlist;
-        if (movie.parent() == this->moviesModel->rootIndex())
+        if (this->moviesModel->hasChildren(movie))
         {
-            title = movie.data().toString();
-            playlist.append(this->moviesModel->filePath(movie));
+            if (this->moviesView->isExpanded(movie))
+            {
+                this->moviesView->collapse(movie);
+            }
+            else
+            {
+                this->moviesView->expand(movie);
+            }
         }
         else
         {
-            title = movie.parent().data().toString();
-            while (movie.isValid())
+            QString title;
+            QStringList playlist;
+            if (movie.parent() == this->moviesModel->rootIndex())
             {
+                title = movie.data().toString();
                 playlist.append(this->moviesModel->filePath(movie));
-                movie = movie.sibling(movie.row() + 1, 0);
             }
-        }
+            else
+            {
+                title = movie.parent().data().toString();
+                while (movie.isValid())
+                {
+                    playlist.append(this->moviesModel->filePath(movie));
+                    movie = movie.sibling(movie.row() + 1, 0);
+                }
+            }
 
-        MplayerWindow* mplayer = new MplayerWindow(title, playlist);
-        Q_UNUSED(mplayer);
+            MplayerWindow* mplayer = new MplayerWindow(title, playlist);
+            Q_UNUSED(mplayer);
+        }
     }
 };
 
