@@ -36,6 +36,10 @@ public:
 
     QVariant data(const QModelIndex& index, int role) const
     {
+        if (role == Qt::TextAlignmentRole && index.column() == 1)
+        {
+            return Qt::AlignRight;
+        }
         if (role != Qt::DisplayRole)
         {
             return QVariant();
