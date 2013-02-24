@@ -156,17 +156,37 @@ public:
         this->planMoreShortcut = new QxtGlobalShortcut(this);
         this->planMoreShortcut->setShortcut(QKeySequence("s"));
         connect(this->planMoreShortcut, SIGNAL(activated()), this, SLOT(planMore()));
+
+        this->showTemporarilyTimer.setInterval(3000);
+        connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
     }
 
+public slots:
     void hide()
     {
         // QApplication::lastWindowClosed() is emited when the last VISIBLE primary window is closed, so this should always be "visible"
         this->move(1920, 0);
+        this->showTemporarilyTimer.stop();
     }
 
     void show()
     {
         this->move(1280, 0);
+        this->showTemporarilyTimer.stop();
+    }
+
+    void showTemporarily()
+    {
+        if (!this->isVisible())
+        {
+            this->show();
+            this->showTemporarilyTimer.start();
+        }
+        else if (this->showTemporarilyTimer.isActive())
+        {
+            // reload timer if already temporarily shown
+            this->showTemporarilyTimer.start();
+        }
     }
 
     bool isVisible() const
@@ -222,6 +242,7 @@ private:
 
     QList<QProcess*> hooks;
 
+    QTimer showTemporarilyTimer;
     QTimer closeTimer;
 
     void determineDurations(QStringList playlist)
@@ -310,11 +331,13 @@ private slots:
     void planLess()
     {
         this->playlist->setActiveCount(std::max(this->playlist->activeCount() - 1, 1));
+        this->showTemporarily();
     }
 
     void planMore()
     {
         this->playlist->setActiveCount(std::min(this->playlist->activeCount() + 1, this->playlist->rowCount()));
+        this->showTemporarily();
     }
 };
 
