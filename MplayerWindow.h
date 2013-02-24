@@ -84,7 +84,7 @@ public:
             PlaylistItem* item = new PlaylistItem;
             item->file = file;
             item->duration = nanf("");
-            item->isActive = true;
+            item->isActive = this->playlist->rowCount() == 0;
             this->playlist->addItem(item);
         }
         this->playlistView = new QTableView(this);
@@ -136,6 +136,10 @@ public:
         this->setFixedSize(640, 1080);
         this->QWidget::show();
         this->hide();
+        if (this->playlist->rowCount() > 1)
+        {
+            this->showTemporarily();
+        }
 
         QtConcurrent::run(this, &MplayerWindow::determineDurations, playlist);
 
