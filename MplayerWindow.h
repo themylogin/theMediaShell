@@ -61,10 +61,20 @@ public:
         this->layout = new QVBoxLayout;
         this->setLayout(layout);
 
+        this->clockLabel = new QLabel(this);
+        this->clockLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -5px; margin-bottom: -5px; }");
+        this->clockLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+        this->layout->addWidget(this->clockLabel);
+        this->clockTimer = new QTimer(this);
+        this->clockTimer->setInterval(1000);
+        connect(this->clockTimer, SIGNAL(timeout()), this, SLOT(updateClockLabel()));
+        this->clockTimer->start();
+        this->updateClockLabel();
+
         this->title = title;
         this->titleLabel = new QLabel(this);
         this->titleLabel->setText(this->title);
-        this->titleLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; }");
+        this->titleLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -5px; margin-bottom: -5px; }");
         this->titleLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
         this->layout->addWidget(this->titleLabel);
 
@@ -185,6 +195,9 @@ protected:
 private:
     QVBoxLayout* layout;
 
+    QLabel* clockLabel;
+    QTimer* clockTimer;
+
     QString title;
     QLabel* titleLabel;
 
@@ -242,6 +255,11 @@ private:
     }
 
 private slots:
+    void updateClockLabel()
+    {
+        this->clockLabel->setText(QDateTime::currentDateTime().toString("hh:mm"));
+    }
+
     void notifyPlaylist()
     {
         this->playlist->notify(QDateTime::currentDateTime(), this->progress);
