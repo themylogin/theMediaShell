@@ -126,6 +126,7 @@ public:
         this->moviesClassificator->addExtension("avi");
         this->moviesClassificator->addExtension("mkv");
         this->moviesClassificator->addExtension("mp4");
+        this->moviesClassificator->addExtension("webm");
         this->moviesModel = new MediaModel("/home/themylogin/Torrent/downloads", this->moviesClassificator, this);
         this->moviesView = new QTreeView(this->tabWidget);
         this->moviesView->setModel(this->moviesModel);
