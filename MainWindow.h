@@ -124,6 +124,7 @@ public:
 
         this->moviesClassificator = new ExtensionMediaClassificator;
         this->moviesClassificator->addExtension("avi");
+        this->moviesClassificator->addExtension("m4v");
         this->moviesClassificator->addExtension("mkv");
         this->moviesClassificator->addExtension("mp4");
         this->moviesClassificator->addExtension("webm");

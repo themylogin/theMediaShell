@@ -7,9 +7,6 @@ if __name__ == "__main__":
     start = int(sys.argv[2])
     end = int(sys.argv[3])
 
-    if end - start < 60:
-        sys.exit(0)
-
     title = os.path.basename(filename)
     download = int(os.stat(filename).st_mtime)
 

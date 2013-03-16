@@ -306,15 +306,18 @@ private slots:
 
     void processFinished()
     {
-        MediaConsumptionHistory history;
-        history.set(this->playlist->getFrontItem()->file, this->progress);
+        if (this->progress > this->playlist->getFrontItem()->duration * 0.5)
+        {
+            MediaConsumptionHistory history;
+            history.set(this->playlist->getFrontItem()->file, this->progress);
 
-        QProcess* hook = new QProcess;
-        hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",
-                    QStringList() << this->playlist->getFrontItem()->file
-                                  << QString::number(this->startedAt.toTime_t())
-                                  << QString::number(QDateTime::currentDateTime().toTime_t()));
-        this->hooks.append(hook);
+            QProcess* hook = new QProcess;
+            hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",
+                        QStringList() << this->playlist->getFrontItem()->file
+                                      << QString::number(this->startedAt.toTime_t())
+                                      << QString::number(QDateTime::currentDateTime().toTime_t()));
+            this->hooks.append(hook);
+        }
 
         this->playlist->popFrontItem();
         this->play();
