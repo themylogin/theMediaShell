@@ -308,8 +308,7 @@ private slots:
     {
         if (this->progress > this->playlist->getFrontItem()->duration * 0.5)
         {
-            MediaConsumptionHistory history;
-            history.set(this->playlist->getFrontItem()->file, this->progress);
+            MediaConsumptionHistory::getInstance().set(this->playlist->getFrontItem()->file, this->progress);
 
             QProcess* hook = new QProcess;
             hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",

@@ -67,8 +67,7 @@ public:
         // HACK: QTreeView::item:checked does not work, this is temporary solution
         if (role == Qt::ForegroundRole)
         {
-            MediaConsumptionHistory history;
-            if (history.contains(this->filePath(index)))
+            if (MediaConsumptionHistory::getInstance().contains(this->filePath(index)))
             {
                 return QColor(120, 120, 120);
             }
