@@ -23,6 +23,8 @@ public:
         this->classificator = classificator;
 
         this->setDynamicSortFilter(true);
+
+        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(QVariant)), this, SLOT(invalidate()));
     }
 
     ~MediaModel()
