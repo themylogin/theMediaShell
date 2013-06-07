@@ -23,7 +23,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
     
 public:
-    MainWindow(QWidget* parent = 0)
+    MainWindow(QString directory, QWidget* parent = 0)
         : QMainWindow(parent)
     {
         this->setStyleSheet(R"(
@@ -128,7 +128,7 @@ public:
         this->moviesClassificator->addExtension("mkv");
         this->moviesClassificator->addExtension("mp4");
         this->moviesClassificator->addExtension("webm");
-        this->moviesModel = new MediaModel("/home/themylogin/Torrent/downloads", this->moviesClassificator, this);
+        this->moviesModel = new MediaModel(directory, this->moviesClassificator, this);
         this->moviesView = new QTreeView(this->tabWidget);
         this->moviesView->setModel(this->moviesModel);
         this->moviesView->setHeaderHidden(true);

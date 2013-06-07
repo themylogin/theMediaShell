@@ -47,12 +47,13 @@ if __name__ == "__main__":
 
     session.execute("""
         INSERT INTO content_item
-        (type, type_key, created_at, permissions, data)
+        (type, type_key, started_at, created_at, permissions, data)
         VALUES
-        (:source, :source_id, :datetime, 0, :data)
+        (:type, :type_key, :started_at, :created_at, 0, :data)
     """, params={
-        "source"    : "movie",
-        "source_id" : end,
-        "datetime"  : datetime.fromtimestamp(end).strftime("%Y-%m-%d %H:%M:%S"),
-        "data"      : simplejson.dumps({ "title" : title, "download" : download, "start" : start })
+        "type"      : "movie",
+        "type_key"  : end,
+        "started_at": datetime.fromtimestamp(start).strftime("%Y-%m-%d %H:%M:%S"),
+        "created_at": datetime.fromtimestamp(end).strftime("%Y-%m-%d %H:%M:%S"),
+        "data"      : simplejson.dumps({ "title" : title, "download" : download })
     })
