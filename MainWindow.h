@@ -71,6 +71,7 @@ public:
             QTreeView::item, QTableView::item
             {
                 padding-right: 20px;
+                color: rgb(80, 80, 80);
             }
             QTreeView::item:selected, QTableView::item:selected
             {
