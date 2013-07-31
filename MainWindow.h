@@ -62,6 +62,7 @@ public:
                 border: none;
                 outline: none;
                 font: 35px "Segoe UI";
+                color: rgb(80, 80, 80);
                 selection-background-color: #fff;
             }
             QTableView
@@ -71,7 +72,6 @@ public:
             QTreeView::item, QTableView::item
             {
                 padding-right: 20px;
-                color: rgb(80, 80, 80);
             }
             QTreeView::item:selected, QTableView::item:selected
             {
