@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = theMediaShell
 TEMPLATE = app
 
-LIBS += -lX11
+LIBS += -lX11 -lqjson
 
 SOURCES += main.cpp \
     Application.cpp

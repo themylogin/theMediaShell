@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 
 #include <qapplication.h>
 
@@ -26,6 +27,8 @@
 #include <QtConcurrentRun>
 
 #include <QxtGlobalShortcut>
+
+#include <qjson/serializer.h>
 
 #include "MediaConsumptionHistory.h"
 #include "PlaylistItem.h"
@@ -239,6 +242,7 @@ private:
     QProcess process;
     QDateTime startedAt;
     float progress;
+    QMap<time_t, float> time2progress;
 
     QxtGlobalShortcut* toggleShortcut;
     QxtGlobalShortcut* planLessShortcut;
@@ -301,22 +305,49 @@ private slots:
         if (rx.lastIndexIn(data) != -1)
         {
             this->progress = rx.capturedTexts()[1].toFloat();
+            this->time2progress[time(NULL)] = this->progress;
         }
     }
 
     void processFinished()
     {
-        if (this->progress > this->playlist->getFrontItem()->duration * 0.5)
-        {
-            MediaConsumptionHistory::getInstance().set(this->playlist->getFrontItem()->file, this->progress);
+        auto finishedPlaylistItem = this->playlist->getFrontItem();
 
-            QProcess* hook = new QProcess;
-            hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",
-                        QStringList() << this->playlist->getFrontItem()->file
-                                      << QString::number(this->startedAt.toTime_t())
-                                      << QString::number(QDateTime::currentDateTime().toTime_t()));
-            this->hooks.append(hook);
+        QList<QVariant> pauses;
+        int previous_unpaused_time = -1;
+        foreach (auto time, this->time2progress.keys())
+        {
+            if (previous_unpaused_time != -1)
+            {
+                const int SIGNIFICANT_PAUSE_LENGTH = 10;
+                if (time - previous_unpaused_time >= SIGNIFICANT_PAUSE_LENGTH)
+                {
+                    QVariantMap pause;
+                    pause["start"] = (int)previous_unpaused_time;
+                    pause["end"] = (int)time;
+                    pauses.append(pause);
+                }
+            }
+
+            previous_unpaused_time = time;
         }
+
+        QVariantMap json;
+        json["start"] = this->startedAt.toTime_t();
+        json["end"] = QDateTime::currentDateTime().toTime_t();
+        json["pauses"] = pauses;
+        json["progress"] = this->progress;
+        json["duration"] = finishedPlaylistItem->duration;
+
+        QProcess* hook = new QProcess;
+        hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",
+                    QStringList() << finishedPlaylistItem->file);
+        QJson::Serializer serializer;
+        hook->write(serializer.serialize(json));
+        hook->closeWriteChannel();
+        this->hooks.append(hook);
+
+        MediaConsumptionHistory::getInstance().set(finishedPlaylistItem->file, this->progress);
 
         this->playlist->popFrontItem();
         this->play();
