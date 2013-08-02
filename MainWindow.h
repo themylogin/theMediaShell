@@ -127,6 +127,7 @@ public:
         this->moviesClassificator->addExtension("avi");
         this->moviesClassificator->addExtension("m4v");
         this->moviesClassificator->addExtension("mkv");
+        this->moviesClassificator->addExtension("mov");
         this->moviesClassificator->addExtension("mp4");
         this->moviesClassificator->addExtension("webm");
         this->moviesModel = new MediaModel(directory, this->moviesClassificator, this);
