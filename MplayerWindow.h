@@ -164,7 +164,7 @@ public:
         this->planMoreShortcut->setShortcut(QKeySequence("s"));
         connect(this->planMoreShortcut, SIGNAL(activated()), this, SLOT(planMore()));
 
-        this->showTemporarilyTimer.setInterval(3000);
+        this->showTemporarilyTimer.setInterval(5000);
         connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
     }
 
@@ -278,8 +278,23 @@ private:
     {
         if (this->playlist->getFrontItem() && this->playlist->getFrontItem()->isActive)
         {
+            QString file = this->playlist->getFrontItem()->file;
+
+            QStringList arguments;
+            if (MediaConsumptionHistory::getInstance().contains(file))
+            {
+                float progress = MediaConsumptionHistory::getInstance().getProgress(file);
+                float duration = MediaConsumptionHistory::getInstance().getDuration(file);
+                if (progress / duration < 0.9)
+                {
+                    arguments.append("-ss");
+                    arguments.append(QString::number(progress));
+                }
+            }
+            arguments.append(file);
+
             this->startedAt = QDateTime::currentDateTime();
-            this->process.start("mplayer", QStringList() << this->playlist->getFrontItem()->file);
+            this->process.start("mplayer", arguments);
         }
         else
         {
