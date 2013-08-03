@@ -24,7 +24,7 @@ public:
 
         this->setDynamicSortFilter(true);
 
-        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(float)), this, SLOT(invalidate()));
+        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(float, float)), this, SLOT(invalidate()));
     }
 
     ~MediaModel()
@@ -54,24 +54,15 @@ public:
             }
         }
 
-        /*
-        // Reuse "checked state" as "watched state"
-        // As stated in http://stackoverflow.com/questions/14642254/styling-qt-model-view-items-based-on-their-itemdatarole-properties, this is the only way to style it via stylesheet
-        if (role == Qt::CheckStateRole)
-        {
-            MediaConsumptionHistory history;
-            if (history.contains(this->filePath(index)))
-            {
-                return Qt::Checked;
-            }
-        }
-        */
-        // HACK: QTreeView::item:checked does not work, this is temporary solution
         if (role == Qt::ForegroundRole)
         {
-            if (MediaConsumptionHistory::getInstance().contains(this->filePath(index)))
+            auto path = this->filePath(index);
+            if (MediaConsumptionHistory::getInstance().contains(path))
             {
-                return QColor(120, 120, 120);
+                float progress = MediaConsumptionHistory::getInstance().getProgress(path);
+                float duration = MediaConsumptionHistory::getInstance().getDuration(path);
+                int color = 80 + 40 * (progress / duration);
+                return QColor(color, color, color);
             }
         }
 

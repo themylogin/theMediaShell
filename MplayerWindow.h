@@ -347,7 +347,7 @@ private slots:
         hook->closeWriteChannel();
         this->hooks.append(hook);
 
-        MediaConsumptionHistory::getInstance().set(finishedPlaylistItem->file, this->progress);
+        MediaConsumptionHistory::getInstance().set(finishedPlaylistItem->file, this->progress, finishedPlaylistItem->duration);
 
         this->playlist->popFrontItem();
         this->play();

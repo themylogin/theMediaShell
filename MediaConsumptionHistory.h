@@ -1,6 +1,7 @@
 #ifndef MEDIACONSUMPTIONHISTORY_H
 #define MEDIACONSUMPTIONHISTORY_H
 
+#include <QPointF>
 #include <QSettings>
 
 class MediaConsumptionHistory : public QObject
@@ -14,18 +15,24 @@ public:
         return history;
     }
 
-    float get(QString path)
+    float getProgress(QString path)
     {
         QSettings settings;
-        return settings.value("MediaConsumptionHistory/" + path).toFloat();
+        return settings.value("MediaConsumptionHistory/" + path).toPointF().x();
     }
 
-    void set(QString path, float progress)
+    float getDuration(QString path)
     {
         QSettings settings;
-        settings.setValue("MediaConsumptionHistory/" + path, progress);
+        return settings.value("MediaConsumptionHistory/" + path).toPointF().y();
+    }
 
-        emit mediaConsumed(progress);
+    void set(QString path, float progress, float duration)
+    {
+        QSettings settings;
+        settings.setValue("MediaConsumptionHistory/" + path, QPointF(progress, duration));
+
+        emit mediaConsumed(progress, duration);
     }
 
     bool contains(QString path)
@@ -40,7 +47,7 @@ private:
     MediaConsumptionHistory& operator=(const MediaConsumptionHistory&);
 
 signals:
-    void mediaConsumed(float progress);
+    void mediaConsumed(float progress, float duration);
 };
 
 #endif // MEDIACONSUMPTIONHISTORY_H
