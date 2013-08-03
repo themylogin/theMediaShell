@@ -14,12 +14,18 @@ public:
         return history;
     }
 
-    void set(QString path, QVariant data)
+    float get(QString path)
     {
         QSettings settings;
-        settings.setValue("MediaConsumptionHistory/" + path, data);
+        return settings.value("MediaConsumptionHistory/" + path).toFloat();
+    }
 
-        emit mediaConsumed(data);
+    void set(QString path, float progress)
+    {
+        QSettings settings;
+        settings.setValue("MediaConsumptionHistory/" + path, progress);
+
+        emit mediaConsumed(progress);
     }
 
     bool contains(QString path)
@@ -34,7 +40,7 @@ private:
     MediaConsumptionHistory& operator=(const MediaConsumptionHistory&);
 
 signals:
-    void mediaConsumed(QVariant data);
+    void mediaConsumed(float progress);
 };
 
 #endif // MEDIACONSUMPTIONHISTORY_H
