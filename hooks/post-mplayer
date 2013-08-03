@@ -19,6 +19,9 @@ if __name__ == "__main__":
     start = int(json["start"])
     end = int(json["end"])
 
+    if end - start < 300:
+        sys.exit(0)
+
     title = os.path.basename(filename)
     download = int(os.stat(filename).st_mtime)
 
