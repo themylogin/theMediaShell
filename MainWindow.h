@@ -151,6 +151,7 @@ public:
         this->newMoviesView->setSelectionBehavior(QAbstractItemView::SelectRows);
         this->newMoviesView->setShowGrid(false);
         this->suitUpView(this->newMoviesView);
+        connect(this->newMoviesView, SIGNAL(activated(QModelIndex)), this, SLOT(newMovieActivated(QModelIndex)));
         this->newMoviesView->setColumnWidth(0, this->newMoviesView->columnWidth(0) - 20); // TODO: because of margin in stylesheet, this is awful
         this->tabWidget->addTab(this->newMoviesView, QString::fromUtf8("Новинки"));
     }
@@ -244,6 +245,29 @@ private:
     QSignalMapper* focusFirstItemMapper;
     QSignalMapper* scrollToCurrentItemMapper;
 
+    void playMovie(QModelIndex movie)
+    {
+        QString title;
+        QStringList playlist;
+        if (movie.parent() == this->moviesModel->rootIndex())
+        {
+            title = movie.data().toString();
+            playlist.append(this->moviesModel->filePath(movie));
+        }
+        else
+        {
+            title = movie.parent().data().toString();
+            while (movie.isValid())
+            {
+                playlist.append(this->moviesModel->filePath(movie));
+                movie = movie.sibling(movie.row() + 1, 0);
+            }
+        }
+
+        MplayerWindow* mplayer = new MplayerWindow(title, playlist);
+        Q_UNUSED(mplayer);
+    }
+
 private slots:
     void setMoviesViewRootIndex()
     {
@@ -277,26 +301,13 @@ private slots:
         }
         else
         {
-            QString title;
-            QStringList playlist;
-            if (movie.parent() == this->moviesModel->rootIndex())
-            {
-                title = movie.data().toString();
-                playlist.append(this->moviesModel->filePath(movie));
-            }
-            else
-            {
-                title = movie.parent().data().toString();
-                while (movie.isValid())
-                {
-                    playlist.append(this->moviesModel->filePath(movie));
-                    movie = movie.sibling(movie.row() + 1, 0);
-                }
-            }
-
-            MplayerWindow* mplayer = new MplayerWindow(title, playlist);
-            Q_UNUSED(mplayer);
+            this->playMovie(movie);
         }
+    }
+
+    void newMovieActivated(QModelIndex movie)
+    {
+        this->playMovie(this->newMoviesModel->mediaModelIndex(movie));
     }
 };
 

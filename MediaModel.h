@@ -24,7 +24,7 @@ public:
 
         this->setDynamicSortFilter(true);
 
-        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(QVariant)), this, SLOT(invalidate()));
+        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(float)), this, SLOT(invalidate()));
     }
 
     ~MediaModel()
