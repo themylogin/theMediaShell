@@ -29,8 +29,11 @@ public:
 
     void set(QString path, float progress, float duration)
     {
-        QSettings settings;
-        settings.setValue("MediaConsumptionHistory/" + path, QPointF(progress, duration));
+        if (!this->contains(path) || this->getProgress(path) < progress)
+        {
+            QSettings settings;
+            settings.setValue("MediaConsumptionHistory/" + path, QPointF(progress, duration));
+        }
 
         emit mediaConsumed(progress, duration);
     }
