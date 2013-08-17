@@ -15,6 +15,8 @@ public:
 private:
     Display* dpy;
     int xkb_event_type;
+
+    void setEnglishLayout();
 };
 
 #endif // APPLICATION_H

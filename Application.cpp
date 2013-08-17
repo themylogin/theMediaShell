@@ -32,6 +32,8 @@ Application::Application(int& argc, char** argv)
         qDebug() << "XkbGetState(this->dpy, XkbUseCoreKbd, &xkb_state) != Success";
         return;
     }
+
+    this->setEnglishLayout();
 }
 
 bool Application::x11EventFilter(XEvent* event)
@@ -41,9 +43,14 @@ bool Application::x11EventFilter(XEvent* event)
         XkbEvent* xkbev = (XkbEvent*)event;
         if (xkbev->any.xkb_type == XkbStateNotify)
         {
-            XkbLockGroup(this->dpy, XkbUseCoreKbd, 0); // do not allow layout any other from english
+            this->setEnglishLayout(); // do not allow layout any other from english
         }
     }
 
     return false;
+}
+
+void Application::setEnglishLayout()
+{
+    XkbLockGroup(this->dpy, XkbUseCoreKbd, 0);
 }
