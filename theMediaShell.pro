@@ -11,10 +11,11 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = theMediaShell
 TEMPLATE = app
 
-LIBS += -lX11 -lqjson
+LIBS += -lX11 -lqjson -lSimpleAmqpClient
 
 SOURCES += main.cpp \
-    Application.cpp
+    Application.cpp \
+    AmqpConnectionThread.cpp
 
 HEADERS  += MainWindow.h \
     MediaModel.h \
@@ -26,7 +27,8 @@ HEADERS  += MainWindow.h \
     PlaylistItem.h \
     PlaylistModel.h \
     Application.h \
-    MediaConsumptionHistory.h
+    MediaConsumptionHistory.h \
+    AmqpConnectionThread.h
 
 FORMS    +=
 

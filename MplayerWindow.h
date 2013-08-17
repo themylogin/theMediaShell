@@ -30,6 +30,7 @@
 
 #include <qjson/serializer.h>
 
+#include "AmqpConnectionThread.h"
 #include "MediaConsumptionHistory.h"
 #include "PlaylistItem.h"
 #include "PlaylistModel.h"
@@ -166,6 +167,10 @@ public:
 
         this->showTemporarilyTimer.setInterval(5000);
         connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
+
+        AmqpConnectionThread* amqp = new AmqpConnectionThread("192.168.0.1");
+        connect(amqp, SIGNAL(messageReceived(QString, QVariantMap)), this, SLOT(amqpMessageReceived(QString, QVariantMap)));
+        amqp->start();
     }
 
 public slots:
@@ -390,6 +395,10 @@ private slots:
     {
         this->playlist->setActiveCount(std::min(this->playlist->activeCount() + 1, this->playlist->rowCount()));
         this->showTemporarily();
+    }
+
+    void amqpMessageReceived(QString name, QVariantMap body)
+    {
     }
 };
 
