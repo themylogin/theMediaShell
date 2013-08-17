@@ -5,6 +5,9 @@
 #include <cmath>
 #include <ctime>
 
+#include <boost/bind.hpp>
+#include <boost/function.hpp>
+
 #include <qapplication.h>
 
 #include <QCloseEvent>
@@ -247,7 +250,9 @@ private:
     QProcess process;
     QDateTime startedAt;
     float progress;
-    QMap<time_t, float> time2progress;
+    QMap<time_t, float> time2progress;    
+
+    QList<boost::function<void (bool)>> ifPausedFunctions;
 
     QxtGlobalShortcut* toggleShortcut;
     QxtGlobalShortcut* planLessShortcut;
@@ -296,6 +301,7 @@ private:
                     arguments.append(QString::number(progress));
                 }
             }
+            arguments.append("-slave");
             arguments.append(file);
 
             this->startedAt = QDateTime::currentDateTime();
@@ -321,11 +327,24 @@ private slots:
     void readProcessStandardOutput()
     {
         QString data = QString::fromUtf8(process.readAllStandardOutput());
+
         QRegExp rx("^A:([0-9. ]+)");
         if (rx.lastIndexIn(data) != -1)
         {
             this->progress = rx.capturedTexts()[1].toFloat();
             this->time2progress[time(NULL)] = this->progress;
+        }
+
+        QRegExp rx2("ANS_pause=(yes|no)");
+        if (rx2.lastIndexIn(data) != -1)
+        {
+            bool paused = rx2.capturedTexts()[1] == "yes";
+
+            foreach (auto function, this->ifPausedFunctions)
+            {
+                function(paused);
+            }
+            this->ifPausedFunctions.clear();
         }
     }
 
@@ -399,6 +418,43 @@ private slots:
 
     void amqpMessageReceived(QString name, QVariantMap body)
     {
+        if (name == "bathroom_light.on changed")
+        {
+            if (body["value"].toBool())
+            {
+                this->ifPaused(boost::bind(&MplayerWindow::onBathroomLightOn, this, _1));
+            }
+            else
+            {
+                this->ifPaused(boost::bind(&MplayerWindow::onBathroomLightOff, this, _1));
+            }
+        }
+    }
+
+    void ifPaused(boost::function<void (bool)> function)
+    {
+        this->ifPausedFunctions.append(function);
+
+        if (this->process.isWritable())
+        {
+            this->process.write("pausing_keep_force get_property pause\n");
+        }
+    }
+
+    void onBathroomLightOn(bool paused)
+    {
+        if (!paused)
+        {
+            this->process.write("pause\n");
+        }
+    }
+
+    void onBathroomLightOff(bool paused)
+    {
+        if (paused)
+        {
+            this->process.write("pausing_toggle seek -10\n");
+        }
     }
 };
 
