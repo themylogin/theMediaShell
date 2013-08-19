@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QMainWindow>
 #include <QSignalMapper>
+#include <QStatusBar>
 #include <QStringList>
 #include <QTableView>
 #include <QTabWidget>
@@ -76,7 +77,7 @@ public:
             QTreeView::item:selected, QTableView::item:selected
             {
                 background-color: rgb(17, 9, 15);
-                color: rgb(240, 241, 240);
+                color: rgb(240, 240, 240);
             }
             QTreeView::indicator:checked, QTableView::indicator:checked
             {
@@ -112,6 +113,11 @@ public:
             QTreeView::branch:open:has-children:!has-siblings {
                 background-color: rgb(17, 9, 15);
             }
+
+            QStatusBar {
+                font: 35px "Segoe UI";
+                color: rgb(240, 240, 240);
+            }
         )");
 
         this->tabWidget = new QTabWidget(this);
@@ -136,6 +142,7 @@ public:
         this->moviesView->setHeaderHidden(true);
         this->suitUpView(this->moviesView);
         connect(this->moviesView, SIGNAL(activated(QModelIndex)), this, SLOT(movieActivated(QModelIndex)));
+        connect(this->moviesView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(movieFocused(QModelIndex,QModelIndex)));
         this->tabWidget->addTab(this->moviesView, QString::fromUtf8("Фильмы"));
 
         // Delaying this somehow prevents startup crashes in QSortFilterProxyModel::parent()
@@ -165,10 +172,11 @@ protected:
     template<typename T>
     void suitUpView(T* view)
     {
-        view->setColumnWidth(0, 1430);  // Name
-        view->setColumnWidth(1, 200);   // Size
-        view->setColumnHidden(2, true); // Type
-        view->setColumnWidth(3, 270);   // Date Modified
+        view->setColumnWidth(0, 1225);  // Name
+        view->setColumnWidth(1, 110);   // Viewed
+        view->setColumnWidth(2, 110);   // Duration
+        view->setColumnWidth(3, 175);   // Size
+        view->setColumnWidth(4, 270);   // Date Modified
 
         view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -308,6 +316,12 @@ private slots:
     void newMovieActivated(QModelIndex movie)
     {
         this->playMovie(this->newMoviesModel->mediaModelIndex(movie));
+    }
+
+    void movieFocused(QModelIndex movie, QModelIndex previous = QModelIndex())
+    {
+        Q_UNUSED(previous);
+        // this->statusBar()->showMessage(...);
     }
 };
 

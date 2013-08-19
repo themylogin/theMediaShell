@@ -2,11 +2,14 @@
 #define MEDIAMODEL_H
 
 #include <QDateTime>
-#include <QFileSystemModel>
+#include <QRegExp>
 #include <QSortFilterProxyModel>
 
 #include "MediaClassificator.h"
 #include "MediaConsumptionHistory.h"
+#include "QFileSystemModelWithMappedColumns.h"
+#include "Utils.h"
+#include "VideoIdentifier.h"
 
 class MediaModel : public QSortFilterProxyModel
 {
@@ -16,7 +19,13 @@ public:
     MediaModel(QString rootPath, MediaClassificator* classificator, QObject *parent = 0)
         : QSortFilterProxyModel(parent)
     {
-        this->fsModel = new QFileSystemModel;
+        QVector<int> columnMap(5);
+        columnMap[0] = 0;
+        columnMap[1] = 1;
+        columnMap[2] = 1;
+        columnMap[3] = 1;
+        columnMap[4] = 3;
+        this->fsModel = new QFileSystemModelWithMappedColumns(columnMap);
         this->fsModel->setRootPath(rootPath);
         this->setSourceModel(this->fsModel);
 
@@ -24,7 +33,10 @@ public:
 
         this->setDynamicSortFilter(true);
 
-        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(float, float)), this, SLOT(invalidate()));
+        connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(QString, float, float)),
+                this, SLOT(onMediaConsumed(QString, float, float)));
+        connect(&VideoIdentifier::getInstance(), SIGNAL(identificationAvailable(QString, VideoIdentification)),
+                this, SLOT(onIdentificationAvailable(QString, VideoIdentification)));
     }
 
     ~MediaModel()
@@ -33,10 +45,44 @@ public:
     }
 
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const
-    {
+    {       
         if (role == Qt::DisplayRole)
         {
-            if (index.column() == 3)
+            if (index.column() == 1)
+            {
+                if (this->fsModel->isDir(this->mapToSource(index)))
+                {
+                    return "";
+                }
+
+                QString path = this->fsModel->filePath(this->mapToSource(index));
+                if (MediaConsumptionHistory::getInstance().contains(path))
+                {
+                    return Utils::formatDuration(MediaConsumptionHistory::getInstance().getProgress(path));
+                }
+
+                return "";
+            }
+
+            if (index.column() == 2)
+            {
+                if (this->fsModel->isDir(this->mapToSource(index)))
+                {
+                    return "";
+                }
+
+                VideoIdentification id;
+                if (this->identification(index, &id))
+                {
+                    return Utils::formatDuration(id.duration);
+                }
+                else
+                {
+                    return "...";
+                }
+            }
+
+            if (index.column() == 4)
             {
                 return this->fsModel->lastModified(this->mapToSource(index)).toString("dd.MM.yyyy hh:mm");
             }
@@ -44,9 +90,9 @@ public:
 
         if (role == Qt::TextAlignmentRole)
         {
-            if (index.column() == 1)
+            if (index.column() == 1 || index.column() == 2 || index.column() == 3)
             {
-                return Qt::AlignRight; // size
+                return Qt::AlignRight;
             }
             else
             {
@@ -61,7 +107,7 @@ public:
             {
                 float progress = MediaConsumptionHistory::getInstance().getProgress(path);
                 float duration = MediaConsumptionHistory::getInstance().getDuration(path);
-                int color = 80 + 40 * (progress / duration);
+                int color = progress > duration * 0.5 ? 120 : 80;
                 return QColor(color, color, color);
             }
         }
@@ -89,6 +135,11 @@ public:
         return this->fsModel->lastModified(this->mapToSource(index));
     }
 
+    bool identification(const QModelIndex& index, VideoIdentification* identification) const
+    {
+        return VideoIdentifier::getInstance().identify(this->filePath(index), identification);
+    }
+
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const
     {
@@ -114,7 +165,7 @@ protected:
     }
 
 private:
-    QFileSystemModel* fsModel;
+    QFileSystemModelWithMappedColumns* fsModel;
     MediaClassificator* classificator;
 
     bool is(const QModelIndex& sourceIndex) const
@@ -149,6 +200,13 @@ private:
         }
         return false;
     }
+
+    void notifyRowUpdate(QString path);
+    void notifyRowUpdate(QString path, int startColumn, int endColumn);
+
+private slots:
+    void onMediaConsumed(QString, float, float);
+    void onIdentificationAvailable(QString, VideoIdentification);
 };
 
 #endif // MEDIAMODEL_H

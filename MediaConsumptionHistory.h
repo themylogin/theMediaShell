@@ -35,7 +35,7 @@ public:
             settings.setValue("MediaConsumptionHistory/" + path, QPointF(progress, duration));
         }
 
-        emit mediaConsumed(progress, duration);
+        emit mediaConsumed(path, progress, duration);
     }
 
     bool contains(QString path)
@@ -50,7 +50,7 @@ private:
     MediaConsumptionHistory& operator=(const MediaConsumptionHistory&);
 
 signals:
-    void mediaConsumed(float progress, float duration);
+    void mediaConsumed(QString path, float progress, float duration);
 };
 
 #endif // MEDIACONSUMPTIONHISTORY_H

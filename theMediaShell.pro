@@ -15,7 +15,10 @@ LIBS += -lX11 -lqjson -lSimpleAmqpClient
 
 SOURCES += main.cpp \
     Application.cpp \
-    AmqpConnectionThread.cpp
+    AmqpConnectionThread.cpp \
+    Utils.cpp \
+    VideoIdentifier.cpp \
+    MediaModel.cpp
 
 HEADERS  += MainWindow.h \
     MediaModel.h \
@@ -28,7 +31,11 @@ HEADERS  += MainWindow.h \
     PlaylistModel.h \
     Application.h \
     MediaConsumptionHistory.h \
-    AmqpConnectionThread.h
+    AmqpConnectionThread.h \
+    QFileSystemModelWithMappedColumns.h \
+    Utils.h \
+    VideoIdentifier.h \
+    VideoIdentification.h
 
 FORMS    +=
 
