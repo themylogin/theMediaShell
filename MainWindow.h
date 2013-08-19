@@ -130,12 +130,14 @@ public:
         connect(this->scrollToCurrentItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(scrollToCurrentItem(QObject*)));
 
         this->moviesModel = new MediaModel(directory, videoClassificator, this);
+        connect(this->moviesModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(updateStatusBar()));
+
         this->moviesView = new QTreeView(this->tabWidget);
         this->moviesView->setModel(this->moviesModel);
         this->moviesView->setHeaderHidden(true);
         this->suitUpView(this->moviesView);
         connect(this->moviesView, SIGNAL(activated(QModelIndex)), this, SLOT(movieActivated(QModelIndex)));
-        connect(this->moviesView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(movieFocused(QModelIndex,QModelIndex)));
+        connect(this->moviesView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(updateStatusBar()));
         this->tabWidget->addTab(this->moviesView, QString::fromUtf8("Фильмы"));
 
         // Delaying this somehow prevents startup crashes in QSortFilterProxyModel::parent()
@@ -152,8 +154,11 @@ public:
         this->newMoviesView->setShowGrid(false);
         this->suitUpView(this->newMoviesView);
         connect(this->newMoviesView, SIGNAL(activated(QModelIndex)), this, SLOT(newMovieActivated(QModelIndex)));
+        connect(this->newMoviesView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(updateStatusBar()));
         this->newMoviesView->setColumnWidth(0, this->newMoviesView->columnWidth(0) - 20); // TODO: because of margin in stylesheet, this is awful
         this->tabWidget->addTab(this->newMoviesView, QString::fromUtf8("Новинки"));
+
+        this->updateStatusBar();
     }
 
     ~MainWindow()
@@ -310,10 +315,55 @@ private slots:
         this->playMovie(this->newMoviesModel->mediaModelIndex(movie));
     }
 
-    void movieFocused(QModelIndex movie, QModelIndex previous = QModelIndex())
+    void updateStatusBar()
     {
-        Q_UNUSED(previous);
-        // this->statusBar()->showMessage(...);
+        if (this->tabWidget->currentIndex() == 0)
+        {
+            QModelIndex selectedIndex = this->moviesView->selectionModel()->currentIndex();
+            if (selectedIndex.isValid())
+            {
+                this->updateStatusBarWithMoviesModelIndex(selectedIndex);
+                return;
+            }
+        }
+
+        if (this->tabWidget->currentIndex() == 1)
+        {
+            QModelIndex selectedIndex = this->newMoviesView->selectionModel()->currentIndex();
+            if (selectedIndex.isValid())
+            {
+                this->updateStatusBarWithMoviesModelIndex(this->newMoviesModel->mediaModelIndex(selectedIndex));
+                return;
+            }
+        }
+
+        this->statusBar()->hide();
+    }
+
+    void updateStatusBarWithMoviesModelIndex(const QModelIndex& index)
+    {
+        VideoIdentification identification;
+        if (this->moviesModel->identification(index, identification))
+        {
+            QStringList message;
+
+            if (identification.subtitles.count())
+            {
+                message << QString::fromUtf8("Субтитры: %1").arg(identification.subtitles.join(", "));
+            }
+
+            if (identification.abandonedSubtitles.count())
+            {
+                message << QString::fromUtf8("Неопознанные субтитры: %1").arg(identification.abandonedSubtitles.count());
+            }
+
+            this->statusBar()->show();
+            this->statusBar()->showMessage(message.join(" | "));
+        }
+        else
+        {
+            this->statusBar()->hide();
+        }
     }
 };
 

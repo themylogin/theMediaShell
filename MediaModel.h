@@ -137,6 +137,11 @@ public:
 
     bool identification(const QModelIndex& index, VideoIdentification& identification) const
     {
+        if (this->isDir(index))
+        {
+            return false;
+        }
+
         return VideoIdentifier::getInstance().identify(this->filePath(index), identification);
     }
 
