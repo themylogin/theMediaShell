@@ -72,7 +72,7 @@ public:
                 }
 
                 VideoIdentification id;
-                if (this->identification(index, &id))
+                if (this->identification(index, id))
                 {
                     return Utils::formatDuration(id.duration);
                 }
@@ -135,7 +135,7 @@ public:
         return this->fsModel->lastModified(this->mapToSource(index));
     }
 
-    bool identification(const QModelIndex& index, VideoIdentification* identification) const
+    bool identification(const QModelIndex& index, VideoIdentification& identification) const
     {
         return VideoIdentifier::getInstance().identify(this->filePath(index), identification);
     }

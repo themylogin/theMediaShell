@@ -18,7 +18,8 @@ SOURCES += main.cpp \
     AmqpConnectionThread.cpp \
     Utils.cpp \
     VideoIdentifier.cpp \
-    MediaModel.cpp
+    MediaModel.cpp \
+    Classificators.cpp
 
 HEADERS  += MainWindow.h \
     MediaModel.h \
@@ -35,7 +36,8 @@ HEADERS  += MainWindow.h \
     QFileSystemModelWithMappedColumns.h \
     Utils.h \
     VideoIdentifier.h \
-    VideoIdentification.h
+    VideoIdentification.h \
+    Classificators.h
 
 FORMS    +=
 

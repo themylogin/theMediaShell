@@ -14,7 +14,7 @@
 #include <QTimer>
 #include <QTreeView>
 
-#include "ExtensionMediaClassificator.h"
+#include "Classificators.h"
 #include "NewMediaModel.h"
 #include "MediaModel.h"
 #include "MplayerWindow.h"
@@ -129,14 +129,7 @@ public:
         this->scrollToCurrentItemMapper = new QSignalMapper(this);
         connect(this->scrollToCurrentItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(scrollToCurrentItem(QObject*)));
 
-        this->moviesClassificator = new ExtensionMediaClassificator;
-        this->moviesClassificator->addExtension("avi");
-        this->moviesClassificator->addExtension("m4v");
-        this->moviesClassificator->addExtension("mkv");
-        this->moviesClassificator->addExtension("mov");
-        this->moviesClassificator->addExtension("mp4");
-        this->moviesClassificator->addExtension("webm");
-        this->moviesModel = new MediaModel(directory, this->moviesClassificator, this);
+        this->moviesModel = new MediaModel(directory, videoClassificator, this);
         this->moviesView = new QTreeView(this->tabWidget);
         this->moviesView->setModel(this->moviesModel);
         this->moviesView->setHeaderHidden(true);
@@ -243,7 +236,6 @@ protected:
 private:
     QTabWidget* tabWidget;
 
-    ExtensionMediaClassificator* moviesClassificator;
     MediaModel* moviesModel;
     QTreeView* moviesView;
 

@@ -1,6 +1,7 @@
 #ifndef VIDEOIDENTIFIER_H
 #define VIDEOIDENTIFIER_H
 
+#include <QDir>
 #include <QFuture>
 #include <QFutureWatcher>
 #include <QMap>
@@ -15,7 +16,7 @@ class VideoIdentifier : public QObject
 
 public:
     static VideoIdentifier& getInstance();
-    bool identify(QString path, VideoIdentification* identification);
+    bool identify(QString path, VideoIdentification& identification);
     
 signals:
     void identificationAvailable(QString, VideoIdentification);
@@ -31,10 +32,12 @@ private:
     VideoIdentifier(const VideoIdentifier&);
     VideoIdentifier& operator=(const VideoIdentifier&);
 
-    QString pathHash(QString path);
-    VideoIdentification doIdentify(QString path);
+    QString pathHash(const QString& path);
+    VideoIdentification doIdentify(const QString& path);
 
     float duration(const QString& data);
+    QStringList listSubtitles(const QString& data);
+    QStringList listAbandonedSubtitles(const QString& path);
 
 private slots:
     void watcherFinished();
