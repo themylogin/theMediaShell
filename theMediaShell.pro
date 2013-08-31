@@ -18,26 +18,29 @@ SOURCES += main.cpp \
     AmqpConnectionThread.cpp \
     Utils.cpp \
     VideoIdentifier.cpp \
-    MediaModel.cpp \
-    Classificators.cpp
+    MediaModel/MediaModel.cpp \
+    Classificators.cpp \
+    RenameAbandonedSubtitlesDialog.cpp
 
 HEADERS  += MainWindow.h \
-    MediaModel.h \
+    MediaModel/MediaModel.h \
+    MediaModel/NewMediaModel.h \
+    MediaModel/Helper/FlatMediaModel.h \
+    MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
+    MediaModel/Helper/QFileSystemProxyModelMixin.h \
     MediaClassificator.h \
     ExtensionMediaClassificator.h \
-    NewMediaModel.h \
-    FlatMediaModel.h \
     MplayerWindow.h \
     PlaylistItem.h \
     PlaylistModel.h \
     Application.h \
     MediaConsumptionHistory.h \
     AmqpConnectionThread.h \
-    QFileSystemModelWithMappedColumns.h \
     Utils.h \
     VideoIdentifier.h \
     VideoIdentification.h \
-    Classificators.h
+    Classificators.h \
+    RenameAbandonedSubtitlesDialog.h
 
 FORMS    +=
 

@@ -15,9 +15,10 @@
 #include <QTreeView>
 
 #include "Classificators.h"
-#include "NewMediaModel.h"
-#include "MediaModel.h"
+#include "MediaModel/MediaModel.h"
+#include "MediaModel/NewMediaModel.h"
 #include "MplayerWindow.h"
+#include "RenameAbandonedSubtitlesDialog.h"
 
 class MainWindow : public QMainWindow
 {
@@ -232,6 +233,18 @@ protected:
                         }
                     }
                 }
+                if (keyEvent->key() == Qt::Key_Insert)
+                {
+                    if (view == this->moviesView)
+                    {
+                        QModelIndex index = this->moviesView->selectionModel()->currentIndex();
+                        if (!this->moviesModel->isDir(index))
+                        {
+                            RenameAbandonedSubtitlesDialog dialog(this->moviesModel, index, this);
+                            dialog.exec();
+                        }
+                    }
+                }
             }
         }
 
@@ -317,6 +330,7 @@ private slots:
 
     void updateStatusBar()
     {
+        /*
         if (this->tabWidget->currentIndex() == 0)
         {
             QModelIndex selectedIndex = this->moviesView->selectionModel()->currentIndex();
@@ -336,12 +350,14 @@ private slots:
                 return;
             }
         }
+        */
 
         this->statusBar()->hide();
     }
 
     void updateStatusBarWithMoviesModelIndex(const QModelIndex& index)
     {
+        /*
         VideoIdentification identification;
         if (this->moviesModel->identification(index, identification))
         {
@@ -364,6 +380,7 @@ private slots:
         {
             this->statusBar()->hide();
         }
+        */
     }
 };
 

@@ -4,19 +4,22 @@
 #include <QDateTime>
 #include <QSortFilterProxyModel>
 
-#include "FlatMediaModel.h"
-#include "MediaModel.h"
+#include "MediaModel/MediaModel.h"
+#include "MediaModel/Helper/FlatMediaModel.h"
+#include "MediaModel/Helper/QFileSystemProxyModelMixin.h"
 
-class NewMediaModel : public QSortFilterProxyModel
+class NewMediaModel : public QSortFilterProxyModel, public QFileSystemProxyModelMixin
 {
     Q_OBJECT
 
 public:
     NewMediaModel(MediaModel* mediaModel, QObject *parent = 0)
-        : QSortFilterProxyModel(parent)
+        : QSortFilterProxyModel(parent),
+          QFileSystemProxyModelMixin(this)
     {
         this->flatMediaModel = new FlatMediaModel(mediaModel, this);
         this->setSourceModel(this->flatMediaModel);
+        this->setSourceFileSystemProxyModel(this->flatMediaModel);
         this->setDynamicSortFilter(true);
     }
 

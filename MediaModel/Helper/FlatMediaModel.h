@@ -4,29 +4,22 @@
 #include <QAbstractProxyModel>
 #include <QList>
 
-#include "MediaModel.h"
+#include "MediaModel/MediaModel.h"
+#include "MediaModel/Helper/QFileSystemProxyModelMixin.h"
 
-class FlatMediaModel : public QAbstractProxyModel
+class FlatMediaModel : public QAbstractProxyModel, public QFileSystemProxyModelMixin
 {
     Q_OBJECT
 
 public:
     FlatMediaModel(MediaModel* mediaModel, QObject* parent = 0)
-        : QAbstractProxyModel(parent)
+        : QAbstractProxyModel(parent),
+          QFileSystemProxyModelMixin(this)
     {
         this->mediaModel = mediaModel;
         this->setSourceModel(this->mediaModel);
+        this->setSourceFileSystemProxyModel(mediaModel);
         connect(this->mediaModel, SIGNAL(layoutChanged()), this, SLOT(sourceLayoutChanged()));
-    }
-
-    QString filePath(const QModelIndex& index) const
-    {
-        return this->mediaModel->filePath(this->mapToSource(index));
-    }
-
-    QDateTime lastModified(const QModelIndex& index) const
-    {
-        return this->mediaModel->lastModified(this->mapToSource(index));
     }
 
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const
