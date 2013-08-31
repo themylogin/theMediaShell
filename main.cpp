@@ -6,6 +6,7 @@
 #include "Classificator/Classificators.h"
 #include "Classificator/ExtensionMediaClassificator.h"
 #include "MediaHandler/MovieHandler.h"
+#include "MediaHandler/ShellCommandHandler.h"
 #include "MediaModel/MediaModel.h"
 #include "MediaModel/NewMediaModel.h"
 #include "MainWindow.h"
@@ -34,22 +35,22 @@ int main(int argc, char* argv[])
     subtitleClassificator = extensionSubtitleClassificator;
 
     Application a(argc, argv);
-    
-    if (a.arguments().count() != 2)
-    {
-        std::cerr << "Usage: " << argv[0] << " <movies directory>" << std::endl;
-        return 1;
-    }
-    
     MainWindow mainWindow;
 
+    //
     MovieHandler* movieHandler = new MovieHandler;
 
-    MediaModel* moviesModel = new MediaModel(a.arguments()[1], extensionVideoClassificator);
+    MediaModel* moviesModel = new MediaModel("/home/themylogin/Storage/Torrent/downloads", extensionVideoClassificator);
     mainWindow.addTree(QString::fromUtf8("Фильмы"), moviesModel, moviesModel->rootIndex(), movieHandler);
 
     NewMediaModel* newMoviesModel = new NewMediaModel(moviesModel);
     mainWindow.addTable(QString::fromUtf8("Новинки"), newMoviesModel, movieHandler);
+
+    //
+    auto nesClassificator = new ExtensionMediaClassificator;
+    nesClassificator->addExtension("nes");
+    MediaModel* nesModel = new MediaModel("/home/themylogin/ROMs/NES ROMs", nesClassificator);
+    mainWindow.addTree(QString::fromUtf8("NES"), nesModel, nesModel->rootIndex(), new ShellCommandHandler("mednafen %1"));
 
     mainWindow.showFullScreen();
     

@@ -20,7 +20,8 @@ SOURCES += main.cpp \
     RenameAbandonedSubtitlesDialog.cpp \
     Classificator/Classificators.cpp \
     MediaModel/MediaModel.cpp \
-    MediaHandler/MovieHandler.cpp
+    MediaHandler/MovieHandler.cpp \
+    MediaHandler/ShellCommandHandler.cpp
 
 HEADERS  += MainWindow.h \
     Classificator/Classificators.h \
@@ -41,7 +42,8 @@ HEADERS  += MainWindow.h \
     VideoIdentification.h \
     RenameAbandonedSubtitlesDialog.h \
     MediaHandler/MediaHandler.h \
-    MediaHandler/MovieHandler.h
+    MediaHandler/MovieHandler.h \
+    MediaHandler/ShellCommandHandler.h
 
 FORMS    +=
 
