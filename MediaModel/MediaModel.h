@@ -3,7 +3,7 @@
 
 #include <QSortFilterProxyModel>
 
-#include "MediaClassificator.h"
+#include "Classificator/MediaClassificator.h"
 #include "MediaModel/Helper/QFileSystemProxyModelMixin.h"
 
 class MediaModel : public QSortFilterProxyModel, public QFileSystemProxyModelMixin

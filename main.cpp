@@ -3,8 +3,11 @@
 #include <QThreadPool>
 
 #include "Application.h"
-#include "Classificators.h"
-#include "ExtensionMediaClassificator.h"
+#include "Classificator/Classificators.h"
+#include "Classificator/ExtensionMediaClassificator.h"
+#include "MediaHandler/MovieHandler.h"
+#include "MediaModel/MediaModel.h"
+#include "MediaModel/NewMediaModel.h"
 #include "MainWindow.h"
 
 int main(int argc, char* argv[])
@@ -38,8 +41,17 @@ int main(int argc, char* argv[])
         return 1;
     }
     
-    MainWindow w(a.arguments()[1]);
-    w.showFullScreen();
+    MainWindow mainWindow;
+
+    MovieHandler* movieHandler = new MovieHandler;
+
+    MediaModel* moviesModel = new MediaModel(a.arguments()[1], extensionVideoClassificator);
+    mainWindow.addTree(QString::fromUtf8("Фильмы"), moviesModel, moviesModel->rootIndex(), movieHandler);
+
+    NewMediaModel* newMoviesModel = new NewMediaModel(moviesModel);
+    mainWindow.addTable(QString::fromUtf8("Новинки"), newMoviesModel, movieHandler);
+
+    mainWindow.showFullScreen();
     
     return a.exec();
 }

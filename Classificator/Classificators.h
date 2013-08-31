@@ -1,7 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-#include "MediaClassificator.h"
+#include "Classificator/MediaClassificator.h"
 
 extern MediaClassificator* videoClassificator;
 extern MediaClassificator* subtitleClassificator;

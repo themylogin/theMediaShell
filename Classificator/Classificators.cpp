@@ -1,4 +1,4 @@
-#include "Classificators.h"
+#include "Classificator/Classificators.h"
 
 MediaClassificator* videoClassificator;
 MediaClassificator* subtitleClassificator;

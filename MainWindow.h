@@ -14,18 +14,17 @@
 #include <QTimer>
 #include <QTreeView>
 
-#include "Classificators.h"
+#include "Classificator/Classificators.h"
+#include "MediaHandler/MediaHandler.h"
 #include "MediaModel/MediaModel.h"
 #include "MediaModel/NewMediaModel.h"
-#include "MplayerWindow.h"
-#include "RenameAbandonedSubtitlesDialog.h"
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
     
 public:
-    MainWindow(QString directory, QWidget* parent = 0)
+    MainWindow(QWidget* parent = 0)
         : QMainWindow(parent)
     {
         QFile qss("://MainWindow.qss");
@@ -39,57 +38,50 @@ public:
         this->tabWidget->setFocusPolicy(Qt::NoFocus);
         this->setCentralWidget(tabWidget);
 
-        this->focusFirstItemMapper = new QSignalMapper(this);
-        connect(this->focusFirstItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(focusFirstItem(QObject*)));
+        this->keepFirstItemFocusedWhileLoadingMapper = new QSignalMapper(this);
+        connect(this->keepFirstItemFocusedWhileLoadingMapper, SIGNAL(mapped(QObject*)), this, SLOT(focusFirstItem(QObject*)));
         this->scrollToCurrentItemMapper = new QSignalMapper(this);
         connect(this->scrollToCurrentItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(scrollToCurrentItem(QObject*)));
-
-        this->moviesModel = new MediaModel(directory, videoClassificator, this);
-        connect(this->moviesModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)), this, SLOT(updateStatusBar()));
-
-        this->moviesView = new QTreeView(this->tabWidget);
-        this->moviesView->setModel(this->moviesModel);
-        this->moviesView->setHeaderHidden(true);
-        this->suitUpView(this->moviesView);
-        connect(this->moviesView, SIGNAL(activated(QModelIndex)), this, SLOT(movieActivated(QModelIndex)));
-        connect(this->moviesView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(updateStatusBar()));
-        this->tabWidget->addTab(this->moviesView, QString::fromUtf8("Фильмы"));
-
-        // Delaying this somehow prevents startup crashes in QSortFilterProxyModel::parent()
-        QTimer::singleShot(0, this, SLOT(setMoviesViewRootIndex()));
-
-        this->newMoviesModel = new NewMediaModel(this->moviesModel, this);
-        this->newMoviesView = new QTableView(this->tabWidget);
-        this->newMoviesView->setModel(this->newMoviesModel);
-        this->newMoviesView->setSortingEnabled(true);
-        this->newMoviesView->horizontalHeader()->hide();
-        this->newMoviesView->verticalHeader()->hide();
-        this->newMoviesView->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
-        this->newMoviesView->setSelectionBehavior(QAbstractItemView::SelectRows);
-        this->newMoviesView->setShowGrid(false);
-        this->suitUpView(this->newMoviesView);
-        connect(this->newMoviesView, SIGNAL(activated(QModelIndex)), this, SLOT(newMovieActivated(QModelIndex)));
-        connect(this->newMoviesView->selectionModel(), SIGNAL(currentChanged(QModelIndex,QModelIndex)), this, SLOT(updateStatusBar()));
-        this->newMoviesView->setColumnWidth(0, this->newMoviesView->columnWidth(0) - 20); // TODO: because of margin in stylesheet, this is awful
-        this->tabWidget->addTab(this->newMoviesView, QString::fromUtf8("Новинки"));
-
-        this->updateStatusBar();
     }
 
-    ~MainWindow()
+    void addTable(QString title, QAbstractItemModel* model, MediaHandler* handler)
     {
+        auto view = new QTableView(this->tabWidget);
+        view->setModel(model);
 
+        view->setSortingEnabled(true);
+        view->horizontalHeader()->hide();
+        view->verticalHeader()->hide();
+        view->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
+        view->setSelectionBehavior(QAbstractItemView::SelectRows);
+        view->setShowGrid(false);
+        this->suitUpView(view, handler);
+        view->setColumnWidth(0, view->columnWidth(0) - 20); // TODO: because of margin in stylesheet, this is awful
+
+        this->tabWidget->addTab(view, title);
+
+        this->handlers[view] = handler;
+    }
+
+    void addTree(QString title, QAbstractItemModel* model, const QModelIndex& rootIndex, MediaHandler* handler)
+    {
+        auto view = new QTreeView(this->tabWidget);
+        view->setModel(model);
+        view->setRootIndex(rootIndex);
+
+        view->setHeaderHidden(true);
+        this->suitUpView(view, handler);
+
+        this->tabWidget->addTab(view, title);
     }
     
 protected:
     template<typename T>
-    void suitUpView(T* view)
+    void suitUpView(T* view, MediaHandler* handler)
     {
         view->setColumnWidth(0, 1225);  // Name
-        view->setColumnWidth(1, 110);   // Viewed
-        view->setColumnWidth(2, 110);   // Duration
-        view->setColumnWidth(3, 175);   // Size
-        view->setColumnWidth(4, 270);   // Date Modified
+        view->setColumnWidth(1, 175);   // Size
+        view->setColumnWidth(2, 270);   // Date Modified
 
         view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -97,10 +89,13 @@ protected:
 
         view->installEventFilter(this);
 
-        this->focusFirstItemMapper->setMapping((QObject*)view->model(), (QObject*)view);
-        connect(view->model(), SIGNAL(layoutChanged()), this->focusFirstItemMapper, SLOT(map()));
+        this->keepFirstItemFocusedWhileLoadingMapper->setMapping((QObject*)view->model(), (QObject*)view);
+        connect(view->model(), SIGNAL(layoutChanged()), this->keepFirstItemFocusedWhileLoadingMapper, SLOT(map()));
         this->scrollToCurrentItemMapper->setMapping((QObject*)view->model(), (QObject*)view);
         connect(view->model(), SIGNAL(layoutChanged()), this->scrollToCurrentItemMapper, SLOT(map()));
+
+        this->handlers[view] = handler;
+        connect(view, SIGNAL(activated(QModelIndex)), this, SLOT(mediaActivated(QModelIndex)));
     }
 
     bool eventFilter(QObject* object, QEvent* event)
@@ -120,7 +115,7 @@ protected:
         {
             if (event->type() == QEvent::KeyPress)
             {
-                this->focusFirstItemMapper->removeMappings(view->model());
+                this->keepFirstItemFocusedWhileLoadingMapper->removeMappings(view->model());
 
                 QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
                 if (keyEvent->key() == Qt::Key_Down)
@@ -147,18 +142,6 @@ protected:
                         }
                     }
                 }
-                if (keyEvent->key() == Qt::Key_Insert)
-                {
-                    if (view == this->moviesView)
-                    {
-                        QModelIndex index = this->moviesView->selectionModel()->currentIndex();
-                        if (!this->moviesModel->isDir(index))
-                        {
-                            RenameAbandonedSubtitlesDialog dialog(this->moviesModel, index, this);
-                            dialog.exec();
-                        }
-                    }
-                }
             }
         }
 
@@ -168,44 +151,12 @@ protected:
 private:
     QTabWidget* tabWidget;
 
-    MediaModel* moviesModel;
-    QTreeView* moviesView;
-
-    NewMediaModel* newMoviesModel;
-    QTableView* newMoviesView;
-
-    QSignalMapper* focusFirstItemMapper;
+    QSignalMapper* keepFirstItemFocusedWhileLoadingMapper;
     QSignalMapper* scrollToCurrentItemMapper;
 
-    void playMovie(QModelIndex movie)
-    {
-        QString title;
-        QStringList playlist;
-        if (movie.parent() == this->moviesModel->rootIndex())
-        {
-            title = movie.data().toString();
-            playlist.append(this->moviesModel->filePath(movie));
-        }
-        else
-        {
-            title = movie.parent().data().toString();
-            while (movie.isValid())
-            {
-                playlist.append(this->moviesModel->filePath(movie));
-                movie = movie.sibling(movie.row() + 1, 0);
-            }
-        }
-
-        MplayerWindow* mplayer = new MplayerWindow(title, playlist);
-        Q_UNUSED(mplayer);
-    }
+    QMap<QAbstractItemView*, MediaHandler*> handlers;
 
 private slots:
-    void setMoviesViewRootIndex()
-    {
-        this->moviesView->setRootIndex(this->moviesModel->rootIndex());
-    }
-
     void focusFirstItem(QObject* object)
     {
         auto view = qobject_cast<QAbstractItemView*>(object);
@@ -218,28 +169,26 @@ private slots:
         view->scrollTo(view->currentIndex());
     }
 
-    void movieActivated(QModelIndex movie)
+    void mediaActivated(QModelIndex movie)
     {
-        if (this->moviesModel->hasChildren(movie))
+        auto view = qobject_cast<QAbstractItemView*>(QObject::sender());
+
+        auto treeView = qobject_cast<QTreeView*>(view);
+        if (treeView && treeView->model()->hasChildren(movie))
         {
-            if (this->moviesView->isExpanded(movie))
+            if (treeView->isExpanded(movie))
             {
-                this->moviesView->collapse(movie);
+                treeView->collapse(movie);
             }
             else
             {
-                this->moviesView->expand(movie);
+                treeView->expand(movie);
             }
         }
         else
         {
-            this->playMovie(movie);
+            this->handlers[view]->activate(movie);
         }
-    }
-
-    void newMovieActivated(QModelIndex movie)
-    {
-        this->playMovie(this->newMoviesModel->mediaModelIndex(movie));
     }
 
     void updateStatusBar()

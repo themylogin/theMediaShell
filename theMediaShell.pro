@@ -17,18 +17,20 @@ SOURCES += main.cpp \
     Application.cpp \
     Utils.cpp \
     VideoIdentifier.cpp \
+    RenameAbandonedSubtitlesDialog.cpp \
+    Classificator/Classificators.cpp \
     MediaModel/MediaModel.cpp \
-    Classificators.cpp \
-    RenameAbandonedSubtitlesDialog.cpp
+    MediaHandler/MovieHandler.cpp
 
 HEADERS  += MainWindow.h \
+    Classificator/Classificators.h \
+    Classificator/MediaClassificator.h \
+    Classificator/ExtensionMediaClassificator.h \
     MediaModel/MediaModel.h \
     MediaModel/NewMediaModel.h \
     MediaModel/Helper/FlatMediaModel.h \
     MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     MediaModel/Helper/QFileSystemProxyModelMixin.h \
-    MediaClassificator.h \
-    ExtensionMediaClassificator.h \
     MplayerWindow.h \
     PlaylistItem.h \
     PlaylistModel.h \
@@ -37,8 +39,9 @@ HEADERS  += MainWindow.h \
     Utils.h \
     VideoIdentifier.h \
     VideoIdentification.h \
-    Classificators.h \
-    RenameAbandonedSubtitlesDialog.h
+    RenameAbandonedSubtitlesDialog.h \
+    MediaHandler/MediaHandler.h \
+    MediaHandler/MovieHandler.h
 
 FORMS    +=
 
