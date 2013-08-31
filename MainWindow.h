@@ -28,98 +28,12 @@ public:
     MainWindow(QString directory, QWidget* parent = 0)
         : QMainWindow(parent)
     {
-        this->setStyleSheet(R"(
-            *
-            {
-                background-color: rgb(17, 9, 15);
-            }
-
-            QTabWidget::pane
-            {
-                border: none;
-            }
-
-            QTabBar
-            {
-                background-color: rgb(17, 9, 15);
-                color: rgb(166, 164, 166);
-                font: 60px "Segoe UI";
-            }
-            QTabBar::tab
-            {
-                border: none;
-                padding: 12px 0 0 25px;
-                font: 48px "Segoe UI";
-            }
-            QTabBar::tab:selected
-            {
-                color: rgb(240, 241, 240);
-                padding: 0px 0 0 25px;
-                font: 60px "Segoe UI";
-            }
-
-            /***/
-            QTreeView, QTableView
-            {
-                border: none;
-                outline: none;
-                font: 35px "Segoe UI";
-                color: rgb(80, 80, 80);
-                selection-background-color: #fff;
-            }
-            QTableView
-            {
-                margin-left: 20px;
-            }
-            QTreeView::item, QTableView::item
-            {
-                padding-right: 20px;
-            }
-            QTreeView::item:selected, QTableView::item:selected
-            {
-                background-color: rgb(17, 9, 15);
-                color: rgb(240, 240, 240);
-            }
-            QTreeView::indicator:checked, QTableView::indicator:checked
-            {
-                image: none;
-                color: rgb(120, 120, 120);
-            }
-            QTreeView::item:checked, QTableView::item:checked
-            {
-                color: rgb(120, 120, 120);
-            }
-
-            QTreeView::branch {
-                background: palette(base);
-            }
-            QTreeView::branch:has-siblings:!adjoins-item {
-                background-color: rgb(17, 9, 15);
-            }
-            QTreeView::branch:has-siblings:adjoins-item {
-                background-color: rgb(17, 9, 15);
-            }
-            QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-                background-color: rgb(17, 9, 15);
-            }
-            QTreeView::branch:closed:has-children:has-siblings {
-                background-color: rgb(17, 9, 15);
-            }
-            QTreeView::branch:has-children:!has-siblings:closed {
-                background-color: rgb(17, 9, 15);
-            }
-            QTreeView::branch:open:has-children:has-siblings {
-                background-color: rgb(17, 9, 15);
-            }
-            QTreeView::branch:open:has-children:!has-siblings {
-                background-color: rgb(17, 9, 15);
-            }
-
-            QStatusBar {
-                font: 35px "Segoe UI";
-                color: rgb(240, 240, 240);
-            }
-        )");
+        QFile qss("://MainWindow.qss");
+        if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+            this->setStyleSheet(qss.readAll());
+            qss.close();
+        }
 
         this->tabWidget = new QTabWidget(this);
         this->tabWidget->setFocusPolicy(Qt::NoFocus);

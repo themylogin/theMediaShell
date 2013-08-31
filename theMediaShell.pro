@@ -1,4 +1,4 @@
-q#-------------------------------------------------
+#-------------------------------------------------
 #
 # Project created by QtCreator 2013-01-26T17:47:17
 #
@@ -46,3 +46,9 @@ QMAKE_CXXFLAGS += -std=c++0x
 
 CONFIG  += qxt
 QXT     += core gui
+
+RESOURCES += \
+    main.qrc
+
+OTHER_FILES += \
+    MainWindow.qss

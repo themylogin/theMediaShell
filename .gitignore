@@ -3,4 +3,5 @@ theMediaShell
 *.o
 *.user
 moc_*
+qrc_*
 ui_*
