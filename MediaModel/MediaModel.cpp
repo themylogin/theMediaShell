@@ -50,7 +50,7 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
         {
             if (!this->isDir(index))
             {
-                return QIcon();
+                return QIcon("://pixel.png");
             }
         }
     }

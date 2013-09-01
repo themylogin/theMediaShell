@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>MainWindow.qss</file>
+        <file>pixel.png</file>
     </qresource>
 </RCC>
