@@ -108,7 +108,7 @@ protected:
             }
         }
 
-        QAbstractItemView* view = qobject_cast<QAbstractItemView*>(object);
+        auto view = qobject_cast<QAbstractItemView*>(object);
         if (view)
         {
             if (event->type() == QEvent::KeyPress)
@@ -116,6 +116,7 @@ protected:
                 this->keepFirstItemFocusedWhileLoadingMapper->removeMappings(view->model());
 
                 QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
+
                 if (keyEvent->key() == Qt::Key_Down)
                 {
                     int y = view->visualRect(view->currentIndex()).top() + 49 * 5;
@@ -137,6 +138,20 @@ protected:
                         if (itemProvidesConfidence.isValid())
                         {
                             view->scrollTo(itemProvidesConfidence);
+                        }
+                    }
+                }
+
+                if (keyEvent->key() == Qt::Key_Left)
+                {
+                    auto treeView = qobject_cast<QTreeView*>(object);
+                    if (treeView)
+                    {
+                        auto parentIndex = treeView->currentIndex().parent();
+                        if (parentIndex.isValid())
+                        {
+                            treeView->collapse(parentIndex);
+                            treeView->setCurrentIndex(parentIndex);
                         }
                     }
                 }
