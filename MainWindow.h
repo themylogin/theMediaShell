@@ -56,7 +56,9 @@ public:
         view->setSelectionBehavior(QAbstractItemView::SelectRows);
         view->setShowGrid(false);
         this->suitUpView(view, handler);
-        view->setColumnWidth(0, view->columnWidth(0) - 20); // TODO: because of margin in stylesheet, this is awful
+        // TODO: because of margin in stylesheet, this is awful
+        view->setColumnWidth(0, view->columnWidth(0) - 20);
+        view->setColumnWidth(2, view->columnWidth(2) + 20);
 
         this->tabWidget->addTab(view, title);
     }
@@ -77,7 +79,7 @@ protected:
     template<typename T>
     void suitUpView(T* view, MediaHandler* handler)
     {
-        view->setColumnWidth(0, 1225);  // Name
+        view->setColumnWidth(0, 1445);  // Name
         view->setColumnWidth(1, 175);   // Size
         view->setColumnWidth(2, 270);   // Date Modified
 
