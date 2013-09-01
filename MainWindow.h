@@ -149,11 +149,14 @@ protected:
                     auto treeView = qobject_cast<QTreeView*>(object);
                     if (treeView)
                     {
-                        auto parentIndex = treeView->currentIndex().parent();
-                        if (parentIndex.isValid())
+                        if (!treeView->isExpanded(treeView->currentIndex()))
                         {
-                            treeView->collapse(parentIndex);
-                            treeView->setCurrentIndex(parentIndex);
+                            auto parentIndex = treeView->currentIndex().parent();
+                            if (parentIndex.isValid() && parentIndex != treeView->rootIndex())
+                            {
+                                treeView->collapse(parentIndex);
+                                treeView->setCurrentIndex(parentIndex);
+                            }
                         }
                     }
                 }
