@@ -32,9 +32,9 @@ HEADERS  += MainWindow.h \
     MediaModel/Helper/FlatMediaModel.h \
     MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     MediaModel/Helper/QFileSystemProxyModelMixin.h \
-    MplayerWindow.h \
-    PlaylistItem.h \
-    PlaylistModel.h \
+    Movie/MplayerWindow.h \
+    Movie/PlaylistItem.h \
+    Movie/PlaylistModel.h \
     Application.h \
     MediaConsumptionHistory.h \
     Utils.h \
