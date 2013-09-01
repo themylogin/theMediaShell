@@ -30,6 +30,7 @@ public:
         }
 
     GETTER(bool, isDir)
+    GETTER(QString, fileName)
     GETTER(QString, filePath)
     GETTER(QDateTime, lastModified)
 

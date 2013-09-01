@@ -34,8 +34,8 @@
 #include <qjson/serializer.h>
 
 #include "MediaConsumptionHistory.h"
-#include "PlaylistItem.h"
-#include "PlaylistModel.h"
+#include "Movie/PlaylistItem.h"
+#include "Movie/PlaylistModel.h"
 
 class MplayerWindow : public QWidget
 {

@@ -8,7 +8,7 @@
 #include <QList>
 #include <QStringList>
 
-#include <PlaylistItem.h>
+#include "Movie/PlaylistItem.h"
 
 class PlaylistModel : public QAbstractTableModel
 {

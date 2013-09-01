@@ -10,7 +10,7 @@
 
 #include <QtConcurrentRun>
 
-#include "Classificators.h"
+#include "Classificator/Classificators.h"
 #include "Utils.h"
 
 VideoIdentifier& VideoIdentifier::getInstance()

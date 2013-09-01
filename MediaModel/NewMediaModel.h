@@ -28,11 +28,6 @@ public:
         delete this->flatMediaModel;
     }
 
-    QModelIndex mediaModelIndex(const QModelIndex& index)
-    {
-        return this->flatMediaModel->mapToSource(this->mapToSource(index));
-    }
-
 protected:
     bool lessThan(const QModelIndex& sourceLeft, const QModelIndex& sourceRight) const
     {

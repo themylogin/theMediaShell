@@ -59,8 +59,6 @@ public:
         view->setColumnWidth(0, view->columnWidth(0) - 20); // TODO: because of margin in stylesheet, this is awful
 
         this->tabWidget->addTab(view, title);
-
-        this->handlers[view] = handler;
     }
 
     void addTree(QString title, QAbstractItemModel* model, const QModelIndex& rootIndex, MediaHandler* handler)

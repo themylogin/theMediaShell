@@ -1,12 +1,12 @@
 #ifndef MOVIEHANDLER_H
 #define MOVIEHANDLER_H
 
-#include "MediaHandler/MediaHandler.h"
+#include "MediaHandler/SequentialMediaHandler.h"
 
-class MovieHandler : public MediaHandler
+class MovieHandler : public SequentialMediaHandler
 {
-public:
-    void activate(const QModelIndex& index);
+protected:
+    void activateSequence(const QString& title, const QList<QModelIndex>& indexes);
 };
 
 #endif // MOVIEHANDLER_H
