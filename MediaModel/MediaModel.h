@@ -1,6 +1,7 @@
 #ifndef MEDIAMODEL_H
 #define MEDIAMODEL_H
 
+#include <QIcon>
 #include <QSortFilterProxyModel>
 
 #include "Classificator/MediaClassificator.h"

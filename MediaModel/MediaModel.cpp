@@ -44,15 +44,22 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
         }
     }
 
+    if (role == Qt::DecorationRole)
+    {
+        if (index.column() == 0)
+        {
+            if (!this->isDir(index))
+            {
+                return QIcon();
+            }
+        }
+    }
+
     if (role == Qt::TextAlignmentRole)
     {
         if (index.column() == 1)
         {
             return Qt::AlignRight;
-        }
-        else
-        {
-            return Qt::AlignLeft;
         }
     }
 
