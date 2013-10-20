@@ -73,10 +73,46 @@ public:
         this->titleLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
         this->layout->addWidget(this->titleLabel);
 
+        // find common prefix among playlist items file names
+        QString prefix = playlist[0].split("/").last();
+        while (prefix.length() > 0)
+        {
+            bool ok = true;
+            foreach (QString file, playlist)
+            {
+                QString name = file.split("/").last();
+                if (!name.startsWith(prefix))
+                {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok)
+            {
+                break;
+            }
+            else
+            {
+                prefix = prefix.left(prefix.length() - 1);
+            }
+        }
+        // if prefix ends with digit (e.g. files are S01E16.avi and S01E17.avi,
+        // so prefix is 'S01E1' and files are '6.avi' and '7.avi'), shorten it
+        // (so prefix will be 'S01E' and files will be '16.avi' and '17.avi')
+        while (prefix.length() > 0 && prefix.at(prefix.length() - 1).isDigit())
+        {
+            prefix = prefix.left(prefix.length() - 1);
+        }
+
         this->playlist = new PlaylistModel(this);
         foreach (QString file, playlist)
         {
             PlaylistItem* item = new PlaylistItem;
+            item->title = file.split("/").last();
+            if (prefix.length() > 0 && this->playlist->rowCount() > 0)
+            {
+                item->title = "..." + item->title.right(item->title.length() - prefix.length());
+            }
             item->file = file;
             item->duration = nanf("");
             item->isActive = this->playlist->rowCount() == 0;
@@ -110,19 +146,17 @@ public:
         this->helpTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         this->helpTable->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         this->helpTable->setColumnCount(2);
-        this->helpTable->setRowCount(5);
+        this->helpTable->setRowCount(4);
         this->helpTable->setColumnWidth(0, 110);
         this->helpTable->setColumnWidth(1, 520);
-        this->helpTable->setItem(0, 0, new QTableWidgetItem(QString::fromUtf8("#")));
-        this->helpTable->setItem(0, 1, new QTableWidgetItem(QString::fromUtf8("Выбор аудиодорожки")));
+        this->helpTable->setItem(0, 0, new QTableWidgetItem(QString::fromUtf8("#/j")));
+        this->helpTable->setItem(0, 1, new QTableWidgetItem(QString::fromUtf8("Выбор аудио / субтитров")));
         this->helpTable->setItem(1, 0, new QTableWidgetItem(QString::fromUtf8("-/+")));
         this->helpTable->setItem(1, 1, new QTableWidgetItem(QString::fromUtf8("Задержка аудиодорожки")));
-        this->helpTable->setItem(2, 0, new QTableWidgetItem(QString::fromUtf8("j")));
-        this->helpTable->setItem(2, 1, new QTableWidgetItem(QString::fromUtf8("Выбор субтитров")));
-        this->helpTable->setItem(3, 0, new QTableWidgetItem(QString::fromUtf8("z/x")));
-        this->helpTable->setItem(3, 1, new QTableWidgetItem(QString::fromUtf8("Задержка субтитров")));
-        this->helpTable->setItem(4, 0, new QTableWidgetItem(QString::fromUtf8("a/s")));
-        this->helpTable->setItem(4, 1, new QTableWidgetItem(QString::fromUtf8("Больше/меньше серий")));
+        this->helpTable->setItem(2, 0, new QTableWidgetItem(QString::fromUtf8("z/x")));
+        this->helpTable->setItem(2, 1, new QTableWidgetItem(QString::fromUtf8("Задержка субтитров")));
+        this->helpTable->setItem(3, 0, new QTableWidgetItem(QString::fromUtf8("a/s")));
+        this->helpTable->setItem(3, 1, new QTableWidgetItem(QString::fromUtf8("Больше/меньше серий")));
         this->helpTable->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         this->helpTable->setFixedSize(620, 238);
         this->layout->addWidget(this->helpTable);

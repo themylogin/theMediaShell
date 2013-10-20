@@ -5,6 +5,7 @@
 
 struct PlaylistItem
 {
+    QString title;
     QString file;
     float duration;
     bool isActive;

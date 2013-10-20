@@ -56,7 +56,7 @@ public:
         PlaylistItem* item = this->playlist[index.row()];
         if (index.column() == 0)
         {
-            return QVariant(item->file.split("/").last());
+            return QVariant(item->title);
         }
         if (index.column() == 1)
         {
