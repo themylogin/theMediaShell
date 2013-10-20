@@ -8,6 +8,8 @@
 
 namespace Utils
 {
+    bool isMovie(QString path);
+
     QString formatDuration(int duration);
     QStringList listSubdirectories(QDir directory);
     QProcess* runMplayer(const QString& file, const QStringList& userArguments = QStringList());

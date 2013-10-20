@@ -1,0 +1,16 @@
+*
+{
+    background-color: rgb(0, 138, 0);
+    color: rgb(240, 241, 240);
+    font: 35px "Segoe UI";
+}
+
+QTableView, QTableWidget
+{
+    border: none;
+    outline: none;
+}
+QTableView::item:!enabled
+{
+    color: rgb(192, 192, 192);
+}

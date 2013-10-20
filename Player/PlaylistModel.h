@@ -8,14 +8,14 @@
 #include <QList>
 #include <QStringList>
 
-#include "Movie/PlaylistItem.h"
+#include "Player/PlaylistItem.h"
 
 class PlaylistModel : public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    explicit PlaylistModel(QObject *parent = 0)
+    PlaylistModel(QObject *parent = 0)
         : QAbstractTableModel(parent)
     {
     }

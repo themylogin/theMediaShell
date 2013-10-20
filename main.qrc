@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>MainWindow.qss</file>
         <file>pixel.png</file>
+        <file>Player/PlayerWindow.qss</file>
     </qresource>
 </RCC>

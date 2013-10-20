@@ -1,27 +1,30 @@
 #include "MediaModel/MediaModel.h"
 
-#include "MediaConsumptionHistory.h"
-#include "MediaModel/Helper/QFileSystemModelWithMappedColumns.h"
+#include <QFileSystemModel>
+#include <QIcon>
 
-MediaModel::MediaModel(QString rootPath, MediaClassificator* classificator, QObject *parent)
+#include "MediaDb.h"
+#include "MediaModel/Helper/QFileSystemModelWithMappedColumns.h"
+#include "Utils.h"
+
+MediaModel::MediaModel(QString rootPath, QObject *parent)
     : QSortFilterProxyModel(parent),
       QFileSystemProxyModelMixin(this)
 {
-    QVector<int> columnMap(3);
+    QVector<int> columnMap(4);
     columnMap[0] = 0;
     columnMap[1] = 1;
-    columnMap[2] = 3;
+    columnMap[2] = 1;
+    columnMap[3] = 3;
     this->fsModel = new QFileSystemModelWithMappedColumns(columnMap);
     this->fsModel->setRootPath(rootPath);
     this->setSourceModel(this->fsModel);
     this->setSourceFileSystemModel(this->fsModel);
 
-    this->classificator = classificator;
-
     this->setDynamicSortFilter(true);
 
-    connect(&MediaConsumptionHistory::getInstance(), SIGNAL(mediaConsumed(QString, QVariant)),
-            this, SLOT(onMediaConsumed(QString, QVariant)));
+    connect(&MediaDb::getInstance(), SIGNAL(keyChangedForPath(QString, QString)),
+            this, SLOT(onMediaDbKeyChangedForPath(QString, QString)));
 }
 
 MediaModel::~MediaModel()
@@ -38,9 +41,23 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
 {
     if (role == Qt::DisplayRole)
     {
-        if (index.column() == 2)
+        if (index.column() == 1)
         {
-            return this->fsModel->lastModified(this->mapToSource(index)).toString("dd.MM.yyyy hh:mm");
+            QString path = this->filePath(index);
+            if (MediaDb::getInstance().contains(path, "duration") && MediaDb::getInstance().contains(path, "progress"))
+            {
+                return Utils::formatDuration(MediaDb::getInstance().get(path, "progress").toFloat()) + " / " +
+                       Utils::formatDuration(MediaDb::getInstance().get(path, "duration").toFloat());
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        if (index.column() == 3)
+        {
+            return this->lastModified(index).toString("dd.MM.yyyy hh:mm");
         }
     }
 
@@ -63,18 +80,17 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
         }
     }
 
-    /*
     if (role == Qt::ForegroundRole)
     {
-        auto path = this->filePath(index);
-        if (MediaConsumptionHistory::getInstance().contains(path))
+        QString path = this->filePath(index);
+        if (MediaDb::getInstance().contains(path, "duration") && MediaDb::getInstance().contains(path, "progress"))
         {
-            float progress = MediaConsumptionHistory::getInstance().getProgress(path);
-            float duration = MediaConsumptionHistory::getInstance().getDuration(path);
-            int color = progress > duration * 0.5 ? 120 : 80;
-            return QColor(color, color, color);
+            if (MediaDb::getInstance().get(path, "progress").toFloat() / MediaDb::getInstance().get(path, "duration").toFloat() > 0.95)
+            {
+                return QColor(160, 160, 160);
+            }
         }
-    }*/
+    }
 
     return QSortFilterProxyModel::data(index, role);
 }
@@ -96,18 +112,18 @@ bool MediaModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent
     // Directory
     if (this->fsModel->isDir(sourceIndex))
     {
-        return this->anyChildrenIs(sourceIndex) > 0;
+        return this->anyChildrenIsMovie(sourceIndex) > 0;
     }
     // File
-    return this->is(sourceIndex);
+    return this->isMovie(sourceIndex);
 }
 
-bool MediaModel::is(const QModelIndex& sourceIndex) const
+bool MediaModel::isMovie(const QModelIndex& sourceIndex) const
 {
-    return this->classificator->is(this->fsModel->filePath(sourceIndex));
+    return Utils::isMovie(this->fsModel->filePath(sourceIndex));
 }
 
-bool MediaModel::anyChildrenIs(const QModelIndex& sourceIndex) const
+bool MediaModel::anyChildrenIsMovie(const QModelIndex& sourceIndex) const
 {
     this->fsModel->fetchMore(sourceIndex);
     for (int i = 0; i < this->fsModel->rowCount(sourceIndex); i++)
@@ -115,7 +131,7 @@ bool MediaModel::anyChildrenIs(const QModelIndex& sourceIndex) const
         QModelIndex sourceChildIndex = this->fsModel->index(i, 0, sourceIndex);
         if (!this->fsModel->isDir(sourceChildIndex))
         {
-            if (this->is(sourceChildIndex))
+            if (this->isMovie(sourceChildIndex))
             {
                 return true;
             }
@@ -126,7 +142,7 @@ bool MediaModel::anyChildrenIs(const QModelIndex& sourceIndex) const
         QModelIndex sourceChildIndex = this->fsModel->index(i, 0, sourceIndex);
         if (this->fsModel->isDir(sourceChildIndex))
         {
-            if (this->anyChildrenIs(sourceChildIndex))
+            if (this->anyChildrenIsMovie(sourceChildIndex))
             {
                 return true;
             }
@@ -137,7 +153,7 @@ bool MediaModel::anyChildrenIs(const QModelIndex& sourceIndex) const
 
 void MediaModel::notifyRowUpdate(QString path)
 {
-    this->notifyRowUpdate(path, 0, 4);
+    this->notifyRowUpdate(path, 0, this->columnCount());
 }
 
 void MediaModel::notifyRowUpdate(QString path, int startColumn, int endColumn)
@@ -151,8 +167,8 @@ void MediaModel::notifyRowUpdate(QString path, int startColumn, int endColumn)
     }
 }
 
-void MediaModel::onMediaConsumed(QString path, QVariant consumeInfo)
+void MediaModel::onMediaDbKeyChangedForPath(QString path, QString key)
 {
-    Q_UNUSED(consumeInfo);
+    Q_UNUSED(key);
     this->notifyRowUpdate(path);
 }

@@ -1,10 +1,8 @@
 #ifndef MEDIAMODEL_H
 #define MEDIAMODEL_H
 
-#include <QIcon>
 #include <QSortFilterProxyModel>
 
-#include "Classificator/MediaClassificator.h"
 #include "MediaModel/Helper/QFileSystemProxyModelMixin.h"
 
 class MediaModel : public QSortFilterProxyModel, public QFileSystemProxyModelMixin
@@ -12,7 +10,7 @@ class MediaModel : public QSortFilterProxyModel, public QFileSystemProxyModelMix
     Q_OBJECT
 
 public:
-    MediaModel(QString rootPath, MediaClassificator* classificator, QObject *parent = 0);
+    MediaModel(QString rootPath, QObject *parent = 0);
     ~MediaModel();
 
     QModelIndex rootIndex() const;
@@ -23,16 +21,15 @@ protected:
 
 private:
     QFileSystemModel* fsModel;
-    MediaClassificator* classificator;
 
-    bool is(const QModelIndex& sourceIndex) const;
-    bool anyChildrenIs(const QModelIndex& sourceIndex) const;
+    bool isMovie(const QModelIndex& sourceIndex) const;
+    bool anyChildrenIsMovie(const QModelIndex& sourceIndex) const;
 
     void notifyRowUpdate(QString path);
     void notifyRowUpdate(QString path, int startColumn, int endColumn);
 
 private slots:
-    void onMediaConsumed(QString, QVariant);
+    void onMediaDbKeyChangedForPath(QString, QString);
 };
 
 #endif // MEDIAMODEL_H

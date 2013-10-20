@@ -1,17 +1,18 @@
-#ifndef MPLAYERWINDOW_H
-#define MPLAYERWINDOW_H
+#ifndef PLAYERWINDOW_H
+#define PLAYERWINDOW_H
+
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include <algorithm>
 #include <cmath>
 #include <ctime>
 
-#include <boost/bind.hpp>
-#include <boost/function.hpp>
-
 #include <qapplication.h>
 
 #include <QCloseEvent>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QFont>
 #include <QLabel>
@@ -33,36 +34,24 @@
 
 #include <qjson/serializer.h>
 
-#include "MediaConsumptionHistory.h"
-#include "Movie/PlaylistItem.h"
-#include "Movie/PlaylistModel.h"
+#include "Player/PlaylistItem.h"
+#include "Player/PlaylistModel.h"
+#include "MediaDb.h"
 
-class MplayerWindow : public QWidget
+class PlayerWindow : public QWidget
 {
     Q_OBJECT
 
 public:
-    MplayerWindow(QString title, QStringList playlist, QWidget* parent = 0)
+    PlayerWindow(QString title, QStringList playlist, QWidget* parent = 0)
         : QWidget(parent)
-    {
-        this->setStyleSheet(R"(
-            *
-            {
-                background-color: rgb(0, 138, 0);
-                color: rgb(240, 241, 240);
-                font: 35px "Segoe UI";
-            }
-
-            QTableView, QTableWidget
-            {
-                border: none;
-                outline: none;
-            }
-            QTableView::item:!enabled
-            {
-                color: rgb(192, 192, 192);
-            }
-        )");
+    {        
+        QFile qss("://Player/PlayerWindow.qss");
+        if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+            this->setStyleSheet(qss.readAll());
+            qss.close();
+        }
 
         this->layout = new QVBoxLayout;
         this->setLayout(layout);
@@ -147,7 +136,7 @@ public:
             this->showTemporarily();
         }
 
-        QtConcurrent::run(this, &MplayerWindow::determineDurations, playlist);
+        QtConcurrent::run(this, &PlayerWindow::determineDurations, playlist);
 
         connect(&this->timer, SIGNAL(timeout()), this, SLOT(notifyPlaylist()));
         connect(&this->process, SIGNAL(readyReadStandardOutput()), this, SLOT(readProcessStandardOutput()));
@@ -245,9 +234,7 @@ private:
     QProcess process;
     QDateTime startedAt;
     float progress;
-    QMap<time_t, float> time2progress;    
-
-    QList<boost::function<void (bool)>> ifPausedFunctions;
+    QMap<time_t, float> time2progress;
 
     QxtGlobalShortcut* toggleShortcut;
     QxtGlobalShortcut* planLessShortcut;
@@ -262,20 +249,31 @@ private:
     {
         foreach (QString file, playlist)
         {
-            QProcess mplayer;
-            mplayer.start("mplayer", QStringList() << "-ao" << "null"
-                                                   << "-vc" << ","
-                                                   << "-vo" << "null"
-                                                   << "-frames" << "0"
-                                                   << "-identify" << file);
-            mplayer.waitForFinished(-1);
-
-            QString data = QString::fromUtf8(mplayer.readAllStandardOutput());
-            QRegExp rx("ID_LENGTH=([0-9]+)");
-            if (rx.lastIndexIn(data) != -1)
+            double duration = nan("");
+            if (MediaDb::getInstance().contains(file, "duration"))
             {
-                this->playlist->setDurationFor(file, rx.capturedTexts()[1].toFloat());
+                duration = MediaDb::getInstance().get(file, "duration").toFloat();
             }
+            else
+            {
+                QProcess mplayer;
+                mplayer.start("mplayer", QStringList() << "-ao" << "null"
+                                                       << "-vc" << ","
+                                                       << "-vo" << "null"
+                                                       << "-frames" << "0"
+                                                       << "-identify" << file);
+                setpriority(PRIO_PROCESS, mplayer.pid(), 19);
+                mplayer.waitForFinished(-1);
+
+                QString data = QString::fromUtf8(mplayer.readAllStandardOutput());
+                QRegExp rx("ID_LENGTH=([0-9]+)");
+                if (rx.lastIndexIn(data) != -1)
+                {
+                    duration = rx.capturedTexts()[1].toFloat();
+                    MediaDb::getInstance().set(file, "duration", duration);
+                }
+            }
+            this->playlist->setDurationFor(file, duration);
         }
     }
 
@@ -286,11 +284,11 @@ private:
             QString file = this->playlist->getFrontItem()->file;
 
             QStringList arguments;
-            if (MediaConsumptionHistory::getInstance().contains(file))
+            if (MediaDb::getInstance().contains(file, "progress"))
             {
-                float progress = MediaConsumptionHistory::getInstance().getProgress(file);
-                float duration = MediaConsumptionHistory::getInstance().getDuration(file);
-                if (progress / duration < 0.9)
+                float progress = MediaDb::getInstance().get(file, "progress").toFloat();
+                float duration = MediaDb::getInstance().get(file, "duration").toFloat();
+                if (progress / duration < 0.95)
                 {
                     arguments.append("-ss");
                     arguments.append(QString::number(progress));
@@ -328,18 +326,6 @@ private slots:
         {
             this->progress = rx.capturedTexts()[1].toFloat();
             this->time2progress[time(NULL)] = this->progress;
-        }
-
-        QRegExp rx2("ANS_pause=(yes|no)");
-        if (rx2.lastIndexIn(data) != -1)
-        {
-            bool paused = rx2.capturedTexts()[1] == "yes";
-
-            foreach (auto function, this->ifPausedFunctions)
-            {
-                function(paused);
-            }
-            this->ifPausedFunctions.clear();
         }
     }
 
@@ -381,7 +367,7 @@ private slots:
         hook->closeWriteChannel();
         this->hooks.append(hook);
 
-        MediaConsumptionHistory::getInstance().set(finishedPlaylistItem->file, this->progress, finishedPlaylistItem->duration);
+        MediaDb::getInstance().set(finishedPlaylistItem->file, "progress", this->progress);
 
         this->playlist->popFrontItem();
         this->play();
@@ -410,47 +396,6 @@ private slots:
         this->playlist->setActiveCount(std::min(this->playlist->activeCount() + 1, this->playlist->rowCount()));
         this->showTemporarily();
     }
-
-    void amqpMessageReceived(QString name, QVariantMap body)
-    {
-        if (name == "bathroom_light.on changed")
-        {
-            if (body["value"].toBool())
-            {
-                this->ifPaused(boost::bind(&MplayerWindow::onBathroomLightOn, this, _1));
-            }
-            else
-            {
-                this->ifPaused(boost::bind(&MplayerWindow::onBathroomLightOff, this, _1));
-            }
-        }
-    }
-
-    void ifPaused(boost::function<void (bool)> function)
-    {
-        this->ifPausedFunctions.append(function);
-
-        if (this->process.isWritable())
-        {
-            this->process.write("pausing_keep_force get_property pause\n");
-        }
-    }
-
-    void onBathroomLightOn(bool paused)
-    {
-        if (!paused)
-        {
-            this->process.write("pause\n");
-        }
-    }
-
-    void onBathroomLightOff(bool paused)
-    {
-        if (paused)
-        {
-            this->process.write("pausing_toggle seek -10\n");
-        }
-    }
 };
 
-#endif // MPLAYERWINDOW_H
+#endif // PLAYERWINDOW_H

@@ -2,29 +2,21 @@
 #define MAINWINDOW_H
 
 #include <QEvent>
-#include <QFileSystemModel>
-#include <QHeaderView>
+#include <QFile>
 #include <QKeyEvent>
 #include <QMainWindow>
-#include <QSignalMapper>
-#include <QStatusBar>
 #include <QStringList>
-#include <QTableView>
-#include <QTabWidget>
-#include <QTimer>
 #include <QTreeView>
 
-#include "Classificator/Classificators.h"
-#include "MediaHandler/MediaHandler.h"
 #include "MediaModel/MediaModel.h"
-#include "MediaModel/NewMediaModel.h"
+#include "Player/PlayerWindow.h"
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
     
 public:
-    MainWindow(QWidget* parent = 0)
+    MainWindow(QString mediaPath, QWidget* parent = 0)
         : QMainWindow(parent)
     {
         QFile qss("://MainWindow.qss");
@@ -34,129 +26,76 @@ public:
             qss.close();
         }
 
-        this->tabWidget = new QTabWidget(this);
-        this->tabWidget->setFocusPolicy(Qt::NoFocus);
-        this->setCentralWidget(tabWidget);
+        this->model = new MediaModel(mediaPath);
 
-        this->keepFirstItemFocusedWhileLoadingMapper = new QSignalMapper(this);
-        connect(this->keepFirstItemFocusedWhileLoadingMapper, SIGNAL(mapped(QObject*)), this, SLOT(focusFirstItem(QObject*)));
-        this->scrollToCurrentItemMapper = new QSignalMapper(this);
-        connect(this->scrollToCurrentItemMapper, SIGNAL(mapped(QObject*)), this, SLOT(scrollToCurrentItem(QObject*)));
-    }
-
-    void addTable(QString title, QAbstractItemModel* model, MediaHandler* handler)
-    {
-        auto view = new QTableView(this->tabWidget);
-        view->setModel(model);
-
-        view->setSortingEnabled(true);
-        view->horizontalHeader()->hide();
-        view->verticalHeader()->hide();
-        view->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
-        view->setSelectionBehavior(QAbstractItemView::SelectRows);
-        view->setShowGrid(false);
-        this->suitUpView(view, handler);
-        // TODO: because of margin in stylesheet, this is awful
-        view->setColumnWidth(0, view->columnWidth(0) - 20);
-        view->setColumnWidth(2, view->columnWidth(2) + 20);
-
-        this->tabWidget->addTab(view, title);
-    }
-
-    void addTree(QString title, QAbstractItemModel* model, const QModelIndex& rootIndex, MediaHandler* handler)
-    {
-        auto view = new QTreeView(this->tabWidget);
-        view->setModel(model);
-        view->setRootIndex(rootIndex);
-
-        view->setHeaderHidden(true);
-        this->suitUpView(view, handler);
-
-        this->tabWidget->addTab(view, title);
+        this->view = new QTreeView(this);
+        this->view->setModel(model);
+        this->view->setRootIndex(this->model->rootIndex());
+        this->view->setHeaderHidden(true);
+        this->view->setColumnWidth(0, 1205);  // Name
+        this->view->setColumnWidth(1, 240);   // Time
+        this->view->setColumnWidth(2, 175);   // Size
+        this->view->setColumnWidth(3, 270);   // Date Modified
+        this->view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        this->view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        this->view->setIconSize(QSize(32, 32));
+        this->focusFirstItemConnected = true;
+        connect(this->model, SIGNAL(layoutChanged()), this, SLOT(focusFirstItem()));
+        connect(this->model, SIGNAL(layoutChanged()), this, SLOT(scrollToCurrentItem()));
+        connect(this->view, SIGNAL(activated(QModelIndex)), this, SLOT(mediaActivated(QModelIndex)));
+        this->view->installEventFilter(this);
+        this->setCentralWidget(this->view);
     }
     
 protected:
-    template<typename T>
-    void suitUpView(T* view, MediaHandler* handler)
-    {
-        view->setColumnWidth(0, 1445);  // Name
-        view->setColumnWidth(1, 175);   // Size
-        view->setColumnWidth(2, 270);   // Date Modified
-
-        view->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-        view->setIconSize(QSize(32, 32));
-
-        view->installEventFilter(this);
-
-        this->keepFirstItemFocusedWhileLoadingMapper->setMapping((QObject*)view->model(), (QObject*)view);
-        connect(view->model(), SIGNAL(layoutChanged()), this->keepFirstItemFocusedWhileLoadingMapper, SLOT(map()));
-        this->scrollToCurrentItemMapper->setMapping((QObject*)view->model(), (QObject*)view);
-        connect(view->model(), SIGNAL(layoutChanged()), this->scrollToCurrentItemMapper, SLOT(map()));
-
-        this->handlers[view] = handler;
-        connect(view, SIGNAL(activated(QModelIndex)), this, SLOT(mediaActivated(QModelIndex)));
-    }
-
     bool eventFilter(QObject* object, QEvent* event)
     {
-        if (event->type() == QEvent::KeyPress)
-        {
-            QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
-            if (keyEvent->key() == Qt::Key_Tab)
-            {
-                this->tabWidget->setCurrentIndex((this->tabWidget->currentIndex() + 1) % this->tabWidget->count());
-                return true;
-            }
-        }
-
-        auto view = qobject_cast<QAbstractItemView*>(object);
-        if (view)
+        if (object == this->view)
         {
             if (event->type() == QEvent::KeyPress)
             {
-                this->keepFirstItemFocusedWhileLoadingMapper->removeMappings(view->model());
+                if (this->focusFirstItemConnected)
+                {
+                    this->focusFirstItemConnected = false;
+                    disconnect(this->model, SIGNAL(layoutChanged()), this, SLOT(focusFirstItem()));
+                }
 
                 QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
 
                 if (keyEvent->key() == Qt::Key_Down)
                 {
-                    int y = view->visualRect(view->currentIndex()).top() + 49 * 5;
-                    if (y > view->viewport()->rect().top())
+                    int y = this->view->visualRect(this->view->currentIndex()).top() + 49 * 5;
+                    if (y > this->view->viewport()->rect().top())
                     {
-                        QModelIndex itemProvidesConfidence = view->indexAt(QPoint(view->viewport()->rect().left(), y));
+                        QModelIndex itemProvidesConfidence = this->view->indexAt(QPoint(this->view->viewport()->rect().left(), y));
                         if (itemProvidesConfidence.isValid())
                         {
-                            view->scrollTo(itemProvidesConfidence);
+                            this->view->scrollTo(itemProvidesConfidence);
                         }
                     }
                 }
                 if (keyEvent->key() == Qt::Key_Up)
                 {
-                    int y = view->visualRect(view->currentIndex()).top() - 49 * 5;
-                    if (y < view->viewport()->rect().top())
+                    int y = this->view->visualRect(this->view->currentIndex()).top() - 49 * 5;
+                    if (y < this->view->viewport()->rect().top())
                     {
-                        QModelIndex itemProvidesConfidence = view->indexAt(QPoint(view->viewport()->rect().left(), y));
+                        QModelIndex itemProvidesConfidence = this->view->indexAt(QPoint(this->view->viewport()->rect().left(), y));
                         if (itemProvidesConfidence.isValid())
                         {
-                            view->scrollTo(itemProvidesConfidence);
+                            this->view->scrollTo(itemProvidesConfidence);
                         }
                     }
                 }
 
                 if (keyEvent->key() == Qt::Key_Left)
                 {
-                    auto treeView = qobject_cast<QTreeView*>(object);
-                    if (treeView)
+                    if (!this->view->isExpanded(this->view->currentIndex()))
                     {
-                        if (!treeView->isExpanded(treeView->currentIndex()))
+                        auto parentIndex = this->view->currentIndex().parent();
+                        if (parentIndex.isValid() && parentIndex != this->view->rootIndex())
                         {
-                            auto parentIndex = treeView->currentIndex().parent();
-                            if (parentIndex.isValid() && parentIndex != treeView->rootIndex())
-                            {
-                                treeView->collapse(parentIndex);
-                                treeView->setCurrentIndex(parentIndex);
-                            }
+                            this->view->collapse(parentIndex);
+                            this->view->setCurrentIndex(parentIndex);
                         }
                     }
                 }
@@ -167,101 +106,59 @@ protected:
     }
 
 private:
-    QTabWidget* tabWidget;
+    MediaModel* model;
+    QTreeView* view;
 
-    QSignalMapper* keepFirstItemFocusedWhileLoadingMapper;
-    QSignalMapper* scrollToCurrentItemMapper;
-
-    QMap<QAbstractItemView*, MediaHandler*> handlers;
+    bool focusFirstItemConnected;
 
 private slots:
-    void focusFirstItem(QObject* object)
+    void focusFirstItem()
     {
-        auto view = qobject_cast<QAbstractItemView*>(object);
-        view->setCurrentIndex(view->model()->index(0, 0, view->rootIndex()));
+        this->view->setCurrentIndex(this->model->index(0, 0, this->view->rootIndex()));
     }
 
-    void scrollToCurrentItem(QObject* object)
+    void scrollToCurrentItem()
     {
-        auto view = qobject_cast<QAbstractItemView*>(object);
-        view->scrollTo(view->currentIndex());
+        this->view->scrollTo(this->view->currentIndex());
     }
 
-    void mediaActivated(QModelIndex movie)
+    void mediaActivated(QModelIndex media)
     {
-        auto view = qobject_cast<QAbstractItemView*>(QObject::sender());
-
-        auto treeView = qobject_cast<QTreeView*>(view);
-        if (treeView && treeView->model()->hasChildren(movie))
+        if (this->model->hasChildren(media))
         {
-            if (treeView->isExpanded(movie))
+            if (this->view->isExpanded(media))
             {
-                treeView->collapse(movie);
+                this->view->collapse(media);
             }
             else
             {
-                treeView->expand(movie);
+                this->view->expand(media);
             }
         }
         else
         {
-            this->handlers[view]->activate(movie);
-        }
-    }
-
-    void updateStatusBar()
-    {
-        /*
-        if (this->tabWidget->currentIndex() == 0)
-        {
-            QModelIndex selectedIndex = this->moviesView->selectionModel()->currentIndex();
-            if (selectedIndex.isValid())
+            QString title;
+            QStringList playlist;
+            if (media.parent() == this->model->rootIndex())
             {
-                this->updateStatusBarWithMoviesModelIndex(selectedIndex);
-                return;
+                title = this->model->fileName(media);
+                playlist.append(this->model->filePath(media));
             }
-        }
-
-        if (this->tabWidget->currentIndex() == 1)
-        {
-            QModelIndex selectedIndex = this->newMoviesView->selectionModel()->currentIndex();
-            if (selectedIndex.isValid())
+            else
             {
-                this->updateStatusBarWithMoviesModelIndex(this->newMoviesModel->mediaModelIndex(selectedIndex));
-                return;
-            }
-        }
-        */
+                title = this->model->fileName(media.parent());
 
-        this->statusBar()->hide();
-    }
-
-    void updateStatusBarWithMoviesModelIndex(const QModelIndex& index)
-    {
-        /*
-        VideoIdentification identification;
-        if (this->moviesModel->identification(index, identification))
-        {
-            QStringList message;
-
-            if (identification.subtitles.count())
-            {
-                message << QString::fromUtf8("Субтитры: %1").arg(identification.subtitles.join(", "));
+                auto item = media;
+                while (item.isValid())
+                {
+                    playlist.append(this->model->filePath(item));
+                    item = item.sibling(item.row() + 1, 0);
+                }
             }
 
-            if (identification.abandonedSubtitles.count())
-            {
-                message << QString::fromUtf8("Неопознанные субтитры: %1").arg(identification.abandonedSubtitles.count());
-            }
-
-            this->statusBar()->show();
-            this->statusBar()->showMessage(message.join(" | "));
+            PlayerWindow* playerWindow = new PlayerWindow(title, playlist);
+            Q_UNUSED(playerWindow);
         }
-        else
-        {
-            this->statusBar()->hide();
-        }
-        */
     }
 };
 
