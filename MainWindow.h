@@ -137,16 +137,22 @@ private slots:
         }
         else
         {
-            QString title;
+            QString playlistName;
+            QString playlistTitle;
             QStringList playlist;
             if (media.parent() == this->model->rootIndex())
             {
-                title = this->model->fileName(media);
+                playlistName = "";
+
+                playlistTitle = this->model->fileName(media);
+
                 playlist.append(this->model->filePath(media));
             }
             else
-            {
-                title = this->model->fileName(media.parent());
+            {                
+                playlistName = this->model->filePath(media.parent());
+
+                playlistTitle = this->model->fileName(media.parent());
 
                 auto item = media;
                 while (item.isValid())
@@ -156,7 +162,7 @@ private slots:
                 }
             }
 
-            PlayerWindow* playerWindow = new PlayerWindow(title, playlist);
+            PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist);
             Q_UNUSED(playerWindow);
         }
     }

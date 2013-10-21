@@ -43,7 +43,7 @@ class PlayerWindow : public QWidget
     Q_OBJECT
 
 public:
-    PlayerWindow(QString title, QStringList playlist, QWidget* parent = 0)
+    PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist, QWidget* parent = 0)
         : QWidget(parent)
     {        
         QFile qss("://Player/PlayerWindow.qss");
@@ -52,6 +52,8 @@ public:
             this->setStyleSheet(qss.readAll());
             qss.close();
         }
+
+        this->playlistName = playlistName;
 
         this->layout = new QVBoxLayout;
         this->setLayout(layout);
@@ -66,7 +68,7 @@ public:
         this->clockTimer->start();
         this->updateClockLabel();
 
-        this->title = title;
+        this->title = playlistTitle;
         this->titleLabel = new QLabel(this);
         this->titleLabel->setText(this->title);
         this->titleLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -5px; margin-bottom: -5px; }");
@@ -146,7 +148,7 @@ public:
         this->helpTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         this->helpTable->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         this->helpTable->setColumnCount(2);
-        this->helpTable->setRowCount(4);
+        this->helpTable->setRowCount(5);
         this->helpTable->setColumnWidth(0, 110);
         this->helpTable->setColumnWidth(1, 520);
         this->helpTable->setItem(0, 0, new QTableWidgetItem(QString::fromUtf8("#/j")));
@@ -157,6 +159,21 @@ public:
         this->helpTable->setItem(2, 1, new QTableWidgetItem(QString::fromUtf8("Задержка субтитров")));
         this->helpTable->setItem(3, 0, new QTableWidgetItem(QString::fromUtf8("a/s")));
         this->helpTable->setItem(3, 1, new QTableWidgetItem(QString::fromUtf8("Больше/меньше серий")));
+        this->helpTable->setItem(4, 0, new QTableWidgetItem(QString::fromUtf8("w/e")));
+        this->openingLength = 0;
+        this->endingLength = 0;
+        if (this->playlistName != "")
+        {
+            if (MediaDb::getInstance().contains(this->playlistName, "openingLength"))
+            {
+                this->openingLength = MediaDb::getInstance().get(this->playlistName, "openingLength").toFloat();
+            }
+            if (MediaDb::getInstance().contains(this->playlistName, "endingLength"))
+            {
+                this->endingLength = MediaDb::getInstance().get(this->playlistName, "endingLength").toFloat();
+            }
+        }
+        this->drawOpeningEndingLength();
         this->helpTable->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         this->helpTable->setFixedSize(620, 238);
         this->layout->addWidget(this->helpTable);
@@ -189,9 +206,24 @@ public:
         this->planMoreShortcut = new QxtGlobalShortcut(this);
         this->planMoreShortcut->setShortcut(QKeySequence("s"));
         connect(this->planMoreShortcut, SIGNAL(activated()), this, SLOT(planMore()));
+        this->openingShortcut = new QxtGlobalShortcut(this);
+        this->openingShortcut->setShortcut(QKeySequence("w"));
+        connect(this->openingShortcut, SIGNAL(activated()), this, SLOT(openingEndsHere()));
+        this->endingShortcut = new QxtGlobalShortcut(this);
+        this->endingShortcut->setShortcut(QKeySequence("e"));
+        connect(this->endingShortcut, SIGNAL(activated()), this, SLOT(endingStartsHere()));
 
         this->showTemporarilyTimer.setInterval(5000);
         connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
+    }
+
+    ~PlayerWindow()
+    {
+        delete this->toggleShortcut;
+        delete this->planLessShortcut;
+        delete this->planMoreShortcut;
+        delete this->openingShortcut;
+        delete this->endingShortcut;
     }
 
 public slots:
@@ -250,6 +282,8 @@ protected:
     }
 
 private:
+    QString playlistName;
+
     QVBoxLayout* layout;
 
     QLabel* clockLabel;
@@ -268,22 +302,43 @@ private:
     QProcess process;
     QDateTime startedAt;
     float progress;
+    float duration;
     QMap<time_t, float> time2progress;
 
     QxtGlobalShortcut* toggleShortcut;
     QxtGlobalShortcut* planLessShortcut;
-    QxtGlobalShortcut* planMoreShortcut;
+    QxtGlobalShortcut* planMoreShortcut;    
+    QxtGlobalShortcut* openingShortcut;
+    QxtGlobalShortcut* endingShortcut;
+
+    QString openingEndingKey;
+    float openingLength;
+    float endingLength;
 
     QList<QProcess*> hooks;
 
     QTimer showTemporarilyTimer;
     QTimer closeTimer;
 
+    bool findDuration(QString stdout, float& duration)
+    {
+        QRegExp rx("ID_LENGTH=([0-9]+)");
+        if (rx.lastIndexIn(stdout) != -1)
+        {
+            duration = rx.capturedTexts()[1].toFloat();
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     void determineDurations(QStringList playlist)
     {
         foreach (QString file, playlist)
         {
-            double duration = nan("");
+            float duration = 0;
             if (MediaDb::getInstance().contains(file, "duration"))
             {
                 duration = MediaDb::getInstance().get(file, "duration").toFloat();
@@ -299,11 +354,9 @@ private:
                 setpriority(PRIO_PROCESS, mplayer.pid(), 19);
                 mplayer.waitForFinished(-1);
 
-                QString data = QString::fromUtf8(mplayer.readAllStandardOutput());
-                QRegExp rx("ID_LENGTH=([0-9]+)");
-                if (rx.lastIndexIn(data) != -1)
+                QString stdout = QString::fromUtf8(mplayer.readAllStandardOutput());
+                if (this->findDuration(stdout, duration))
                 {
-                    duration = rx.capturedTexts()[1].toFloat();
                     MediaDb::getInstance().set(file, "duration", duration);
                 }
             }
@@ -318,7 +371,12 @@ private:
             QString file = this->playlist->getFrontItem()->file;
 
             QStringList arguments;
-            if (MediaDb::getInstance().contains(file, "progress"))
+            if (this->openingLength > 0)
+            {
+                arguments.append("-ss");
+                arguments.append(QString::number(this->openingLength));
+            }
+            else if (MediaDb::getInstance().contains(file, "progress"))
             {
                 float progress = MediaDb::getInstance().get(file, "progress").toFloat();
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
@@ -328,6 +386,7 @@ private:
                     arguments.append(QString::number(progress));
                 }
             }
+            arguments.append("-identify");
             arguments.append("-slave");
             arguments.append(file);
 
@@ -351,15 +410,31 @@ private slots:
         this->playlist->notify(QDateTime::currentDateTime(), this->progress);
     }
 
+    void drawOpeningEndingLength()
+    {
+        this->helpTable->setItem(4, 1, new QTableWidgetItem(QString::fromUtf8("Опенинг (%1 с.) / титры (%2 с.)").arg((int)this->openingLength).arg((int)this->endingLength)));
+    }
+
     void readProcessStandardOutput()
     {
-        QString data = QString::fromUtf8(process.readAllStandardOutput());
+        QString data = QString::fromUtf8(this->process.readAllStandardOutput());
+
+        float duration;
+        if (this->findDuration(data, duration))
+        {
+            this->duration = duration;
+        }
 
         QRegExp rx("^A:([0-9. ]+)");
         if (rx.lastIndexIn(data) != -1)
         {
             this->progress = rx.capturedTexts()[1].toFloat();
             this->time2progress[time(NULL)] = this->progress;
+
+            if (this->duration - this->progress < this->endingLength)
+            {
+                this->process.write("quit\n");
+            }
         }
     }
 
@@ -429,6 +504,26 @@ private slots:
     {
         this->playlist->setActiveCount(std::min(this->playlist->activeCount() + 1, this->playlist->rowCount()));
         this->showTemporarily();
+    }
+
+    void openingEndsHere()
+    {
+        this->openingLength = this->progress;
+        if (this->playlistName != "")
+        {
+            MediaDb::getInstance().set(this->playlistName, "openingLength", this->openingLength);
+        }
+        this->drawOpeningEndingLength();
+    }
+
+    void endingStartsHere()
+    {
+        this->endingLength = this->duration - this->progress;
+        if (this->playlistName != "")
+        {
+            MediaDb::getInstance().set(this->playlistName, "endingLength", this->endingLength);
+        }
+        this->drawOpeningEndingLength();
     }
 };
 
