@@ -197,6 +197,9 @@ public:
         this->timer.start(1000);
         this->play();
 
+        this->stopShortcut = new QxtGlobalShortcut(this);
+        this->stopShortcut->setShortcut(QKeySequence("q"));
+        connect(this->stopShortcut, SIGNAL(activated()), this, SLOT(stop()));
         this->toggleShortcut = new QxtGlobalShortcut(this);
         this->toggleShortcut->setShortcut(QKeySequence("o"));
         connect(this->toggleShortcut, SIGNAL(activated()), this, SLOT(toggle()));
@@ -271,6 +274,7 @@ protected:
         this->closeTimer.stop();
         event->accept();
 
+        delete this->stopShortcut;
         delete this->toggleShortcut;
         delete this->planLessShortcut;
         delete this->planMoreShortcut;
@@ -302,6 +306,7 @@ private:
     float duration;
     QMap<time_t, float> time2progress;
 
+    QxtGlobalShortcut* stopShortcut;
     QxtGlobalShortcut* toggleShortcut;
     QxtGlobalShortcut* planLessShortcut;
     QxtGlobalShortcut* planMoreShortcut;    
@@ -477,6 +482,12 @@ private slots:
 
         this->playlist->popFrontItem();
         this->play();
+    }
+
+    void stop()
+    {
+        this->playlist->setActiveCount(1);
+        this->process.kill();
     }
 
     void toggle()
