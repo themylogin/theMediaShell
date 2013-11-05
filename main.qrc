@@ -3,5 +3,6 @@
         <file>MainWindow.qss</file>
         <file>pixel.png</file>
         <file>Player/PlayerWindow.qss</file>
+        <file>QMessageBox.qss</file>
     </qresource>
 </RCC>

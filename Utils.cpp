@@ -62,4 +62,16 @@ namespace Utils
                                                 << file);
         return mplayer;
     }
+
+    bool setStyleSheetFromFile(QWidget* widget, QString fileName)
+    {
+        QFile qss(fileName);
+        if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
+        {
+            widget->setStyleSheet(qss.readAll());
+            qss.close();
+            return true;
+        }
+        return false;
+    }
 }

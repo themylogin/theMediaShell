@@ -41,4 +41,5 @@ RESOURCES += \
 
 OTHER_FILES += \
     MainWindow.qss \
-    Player/PlayerWindow.qss
+    Player/PlayerWindow.qss \
+    QMessageBox.qss

@@ -1,6 +1,7 @@
 *
 {
     background-color: rgb(17, 9, 15);
+    font: 35px "Segoe UI";
 }
 
 QTabWidget::pane
@@ -32,7 +33,6 @@ QTreeView, QTableView
 {
     border: none;
     outline: none;
-    font: 35px "Segoe UI";
     color: rgb(80, 80, 80);
     selection-background-color: #fff;
 }

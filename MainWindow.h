@@ -11,6 +11,7 @@
 
 #include "MediaModel/MediaModel.h"
 #include "Player/PlayerWindow.h"
+#include "Utils.h"
 
 class MainWindow : public QMainWindow
 {
@@ -20,12 +21,7 @@ public:
     MainWindow(QString mediaPath, QWidget* parent = 0)
         : QMainWindow(parent)
     {
-        QFile qss("://MainWindow.qss");
-        if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
-        {
-            this->setStyleSheet(qss.readAll());
-            qss.close();
-        }
+        Utils::setStyleSheetFromFile(this, "://MainWindow.qss");
 
         this->model = new MediaModel(mediaPath);
 
@@ -104,14 +100,18 @@ protected:
                 if (keyEvent->key() == Qt::Key_Delete)
                 {
                     auto index = this->view->currentIndex();
-                    switch (QMessageBox::question(this,
-                                                  "Are you sure?",
-                                                  QString("Are you sure want to delete %1?").arg(this->model->fileName(index)),
-                                                  QMessageBox::Yes, QMessageBox::No))
+
+                    QMessageBox messageBox(QMessageBox::Question,
+                                           "Are you sure?",
+                                           QString("Are you sure want to delete %1?").arg(this->model->fileName(index)),
+                                           QMessageBox::Yes | QMessageBox::No,
+                                           this,
+                                           Qt::Dialog | Qt::FramelessWindowHint);
+                    messageBox.setDefaultButton(QMessageBox::Yes);
+                    Utils::setStyleSheetFromFile(&messageBox, "://QMessageBox.qss");
+                    if (messageBox.exec() == QMessageBox::Yes)
                     {
-                    case QMessageBox::Yes:
                         this->model->remove(index);
-                        break;
                     }
                 }
             }

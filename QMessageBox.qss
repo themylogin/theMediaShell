@@ -1,0 +1,15 @@
+QMessageBox, QMessageBox *
+{
+    background-color: rgb(37, 29, 35);
+}
+
+QPushButton
+{
+    border: 0;
+    padding: 0 32px;
+}
+QPushButton:focus
+{
+    color: rgb(240, 241, 240);
+    outline: none;
+}
