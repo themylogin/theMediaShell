@@ -49,6 +49,8 @@ if __name__ == "__main__":
         for image in glob.glob(os.path.join(tmp_dir, "0000*.jpg")):
             os.unlink(image)
 
+        os.rmdir(tmp_dir)
+
         i += 1
 
     #

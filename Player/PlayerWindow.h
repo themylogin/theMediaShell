@@ -380,7 +380,7 @@ private:
             {
                 float progress = MediaDb::getInstance().get(file, "progress").toFloat();
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
-                if (progress / duration < 0.95)
+                if (progress / duration < 0.85)
                 {
                     arguments.append("-ss");
                     arguments.append(QString::number(progress));

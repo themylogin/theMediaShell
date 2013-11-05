@@ -14,6 +14,7 @@ namespace Utils
                        << ".mkv"
                        << ".mov"
                        << ".mp4"
+                       << ".ts"
                        << ".webm";
         }
 

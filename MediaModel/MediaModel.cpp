@@ -85,7 +85,7 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
         QString path = this->filePath(index);
         if (MediaDb::getInstance().contains(path, "duration") && MediaDb::getInstance().contains(path, "progress"))
         {
-            if (MediaDb::getInstance().get(path, "progress").toFloat() / MediaDb::getInstance().get(path, "duration").toFloat() > 0.95)
+            if (MediaDb::getInstance().get(path, "progress").toFloat() / MediaDb::getInstance().get(path, "duration").toFloat() > 0.85)
             {
                 return QColor(160, 160, 160);
             }
