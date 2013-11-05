@@ -18,6 +18,7 @@
 #include <QLabel>
 #include <QList>
 #include <QHeaderView>
+#include <QHBoxLayout>
 #include <QPair>
 #include <QProcess>
 #include <QRegExp>
@@ -58,15 +59,23 @@ public:
         this->layout = new QVBoxLayout;
         this->setLayout(layout);
 
+        this->clockLayout = new QHBoxLayout;
         this->clockLabel = new QLabel(this);
         this->clockLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -5px; margin-bottom: -5px; }");
         this->clockLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-        this->layout->addWidget(this->clockLabel);
+        this->clockLayout->addWidget(this->clockLabel);
         this->clockTimer = new QTimer(this);
         this->clockTimer->setInterval(1000);
         connect(this->clockTimer, SIGNAL(timeout()), this, SLOT(updateClockLabel()));
         this->clockTimer->start();
         this->updateClockLabel();
+        this->powerLabel = new QLabel(this);
+        this->powerLabel->setPixmap(QPixmap::fromImage(QImage("://power.png")));
+        this->clockLayout->addWidget(this->powerLabel);
+        this->powerOffOnFinish = false;
+        this->updatePowerLabel();
+        this->clockLayout->addStretch();
+        this->layout->addLayout(this->clockLayout);
 
         this->title = playlistTitle;
         this->titleLabel = new QLabel(this);
@@ -203,6 +212,9 @@ public:
         this->toggleShortcut = new QxtGlobalShortcut(this);
         this->toggleShortcut->setShortcut(QKeySequence("o"));
         connect(this->toggleShortcut, SIGNAL(activated()), this, SLOT(toggle()));
+        this->powerOffOnFinishShortcut = new QxtGlobalShortcut(this);
+        this->powerOffOnFinishShortcut->setShortcut(QKeySequence("p"));
+        connect(this->powerOffOnFinishShortcut, SIGNAL(activated()), this, SLOT(togglePowerOffOnFinish()));
         this->planLessShortcut = new QxtGlobalShortcut(this);
         this->planLessShortcut->setShortcut(QKeySequence("a"));
         connect(this->planLessShortcut, SIGNAL(activated()), this, SLOT(planLess()));
@@ -276,6 +288,7 @@ protected:
 
         delete this->stopShortcut;
         delete this->toggleShortcut;
+        delete this->powerOffOnFinishShortcut;
         delete this->planLessShortcut;
         delete this->planMoreShortcut;
         delete this->openingShortcut;
@@ -287,8 +300,12 @@ private:
 
     QVBoxLayout* layout;
 
+    QHBoxLayout* clockLayout;
     QLabel* clockLabel;
     QTimer* clockTimer;
+    QLabel* powerLabel;
+
+    bool powerOffOnFinish;
 
     QString title;
     QLabel* titleLabel;
@@ -308,6 +325,7 @@ private:
 
     QxtGlobalShortcut* stopShortcut;
     QxtGlobalShortcut* toggleShortcut;
+    QxtGlobalShortcut* powerOffOnFinishShortcut;
     QxtGlobalShortcut* planLessShortcut;
     QxtGlobalShortcut* planMoreShortcut;    
     QxtGlobalShortcut* openingShortcut;
@@ -397,14 +415,39 @@ private:
         }
         else
         {
+            if (this->powerOffOnFinish)
+            {
+                QProcess* hook = new QProcess;
+                hook->start(this->getHookPath("power-off"));
+                hook->closeWriteChannel();
+                this->hooks.append(hook);
+            }
+
             this->close();
         }
+    }
+
+    QString getHookPath(QString hookName)
+    {
+        return QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
     }
 
 private slots:
     void updateClockLabel()
     {
         this->clockLabel->setText(QDateTime::currentDateTime().toString("hh:mm"));
+    }
+
+    void updatePowerLabel()
+    {
+        this->powerLabel->setVisible(this->powerOffOnFinish);
+    }
+
+    void togglePowerOffOnFinish()
+    {
+        this->powerOffOnFinish = !this->powerOffOnFinish;
+        this->updatePowerLabel();
+        this->showTemporarily();
     }
 
     void notifyPlaylist()
@@ -471,7 +514,7 @@ private slots:
         json["duration"] = finishedPlaylistItem->duration;
 
         QProcess* hook = new QProcess;
-        hook->start(QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/post-mplayer",
+        hook->start(this->getHookPath("post-mplayer"),
                     QStringList() << finishedPlaylistItem->file);
         QJson::Serializer serializer;
         hook->write(serializer.serialize(json));
@@ -486,6 +529,7 @@ private slots:
 
     void stop()
     {
+        this->powerOffOnFinish = false; // manual interruption is not finish
         this->playlist->setActiveCount(1);
         this->process.kill();
     }

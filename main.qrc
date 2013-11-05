@@ -4,5 +4,6 @@
         <file>pixel.png</file>
         <file>Player/PlayerWindow.qss</file>
         <file>QMessageBox.qss</file>
+        <file>power.png</file>
     </qresource>
 </RCC>
