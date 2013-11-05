@@ -217,15 +217,6 @@ public:
         connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
     }
 
-    ~PlayerWindow()
-    {
-        delete this->toggleShortcut;
-        delete this->planLessShortcut;
-        delete this->planMoreShortcut;
-        delete this->openingShortcut;
-        delete this->endingShortcut;
-    }
-
 public slots:
     void hide()
     {
@@ -279,6 +270,12 @@ protected:
 
         this->closeTimer.stop();
         event->accept();
+
+        delete this->toggleShortcut;
+        delete this->planLessShortcut;
+        delete this->planMoreShortcut;
+        delete this->openingShortcut;
+        delete this->endingShortcut;
     }
 
 private:
