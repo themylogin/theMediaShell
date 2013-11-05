@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QKeyEvent>
 #include <QMainWindow>
+#include <QMessageBox>
 #include <QStringList>
 #include <QTreeView>
 
@@ -97,6 +98,20 @@ protected:
                             this->view->collapse(parentIndex);
                             this->view->setCurrentIndex(parentIndex);
                         }
+                    }
+                }
+
+                if (keyEvent->key() == Qt::Key_Delete)
+                {
+                    auto index = this->view->currentIndex();
+                    switch (QMessageBox::question(this,
+                                                  "Are you sure?",
+                                                  QString("Are you sure want to delete %1?").arg(this->model->fileName(index)),
+                                                  QMessageBox::Yes, QMessageBox::No))
+                    {
+                    case QMessageBox::Yes:
+                        this->model->remove(index);
+                        break;
                     }
                 }
             }

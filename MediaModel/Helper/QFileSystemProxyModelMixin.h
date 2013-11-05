@@ -13,26 +13,20 @@ public:
         this->child = child;
 
         this->sourceFileSystemModel = NULL;
-        this->sourceFileSystemProxyModel = NULL;
     }
 
-    #define GETTER(type, getter)\
+    #define PROXY(type, getter)\
         type getter(const QModelIndex& index) const\
         {\
-            if (this->sourceFileSystemModel)\
-            {\
-                return this->sourceFileSystemModel->getter(this->child->mapToSource(index));\
-            }\
-            else\
-            {\
-                return this->sourceFileSystemProxyModel->getter(this->child->mapToSource(index));\
-            }\
+            return this->sourceFileSystemModel->getter(this->child->mapToSource(index));\
         }
 
-    GETTER(bool, isDir)
-    GETTER(QString, fileName)
-    GETTER(QString, filePath)
-    GETTER(QDateTime, lastModified)
+    PROXY(bool, isDir)
+    PROXY(QString, fileName)
+    PROXY(QString, filePath)
+    PROXY(QDateTime, lastModified)
+
+    PROXY(bool, remove)
 
 protected:
     void setSourceFileSystemModel(QFileSystemModel* sourceFileSystemModel)
@@ -40,16 +34,10 @@ protected:
         this->sourceFileSystemModel = sourceFileSystemModel;
     }
 
-    void setSourceFileSystemProxyModel(QFileSystemProxyModelMixin* sourceFileSystemProxyModel)
-    {
-        this->sourceFileSystemProxyModel = sourceFileSystemProxyModel;
-    }
-
 private:
     QAbstractProxyModel* child;
 
     QFileSystemModel* sourceFileSystemModel;
-    QFileSystemProxyModelMixin* sourceFileSystemProxyModel;
 };
 
 #endif // QFILESYSTEMPROXYMODELMIXIN_H
