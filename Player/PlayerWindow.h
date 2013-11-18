@@ -200,6 +200,7 @@ public:
 
         connect(&this->timer, SIGNAL(timeout()), this, SLOT(notifyPlaylist()));
         connect(&this->process, SIGNAL(readyReadStandardOutput()), this, SLOT(readProcessStandardOutput()));
+        connect(&this->process, SIGNAL(readyReadStandardError()), this, SLOT(readProcessStandardError()));
         connect(&this->process, SIGNAL(finished(int)), this, SLOT(processFinished()));
         this->progress = 0;
 
@@ -365,16 +366,13 @@ private:
             }
             else
             {
-                QProcess mplayer;
-                mplayer.start("mplayer", QStringList() << "-ao" << "null"
-                                                       << "-vc" << ","
-                                                       << "-vo" << "null"
-                                                       << "-frames" << "0"
-                                                       << "-identify" << file);
-                setpriority(PRIO_PROCESS, mplayer.pid(), 19);
-                mplayer.waitForFinished(-1);
+                QProcess mpv;
+                mpv.start("mpv", QStringList() << "-frames" << "0"
+                                               << "-identify" << file);
+                setpriority(PRIO_PROCESS, mpv.pid(), 19);
+                mpv.waitForFinished(-1);
 
-                QString stdout = QString::fromUtf8(mplayer.readAllStandardOutput());
+                QString stdout = QString::fromUtf8(mpv.readAllStandardOutput());
                 if (this->findDuration(stdout, duration))
                 {
                     MediaDb::getInstance().set(file, "duration", duration);
@@ -393,7 +391,7 @@ private:
             QStringList arguments;
             if (this->openingLength > 0)
             {
-                arguments.append("-ss");
+                arguments.append("--start");
                 arguments.append(QString::number(this->openingLength));
             }
             else if (MediaDb::getInstance().contains(file, "progress"))
@@ -402,16 +400,15 @@ private:
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
                 if (progress / duration < 0.85)
                 {
-                    arguments.append("-ss");
+                    arguments.append("--start");
                     arguments.append(QString::number(progress));
                 }
             }
             arguments.append("-identify");
-            arguments.append("-slave");
             arguments.append(file);
 
             this->startedAt = QDateTime::currentDateTime();
-            this->process.start("mplayer", arguments);
+            this->process.start("mpv", arguments);
         }
         else
         {
@@ -462,18 +459,25 @@ private slots:
 
     void readProcessStandardOutput()
     {
-        QString data = QString::fromUtf8(this->process.readAllStandardOutput());
+        QString stdout = QString::fromUtf8(this->process.readAllStandardOutput());
 
         float duration;
-        if (this->findDuration(data, duration))
+        if (this->findDuration(stdout, duration))
         {
             this->duration = duration;
         }
+    }
 
-        QRegExp rx("^A:([0-9. ]+)");
-        if (rx.lastIndexIn(data) != -1)
+    void readProcessStandardError()
+    {
+        QString stderr = QString::fromUtf8(this->process.readAllStandardError());
+
+        QRegExp rx("V: ([0-9]+):([0-9]+):([0-9]+)");
+        if (rx.lastIndexIn(stderr) != -1)
         {
-            this->progress = rx.capturedTexts()[1].toFloat();
+            this->progress = rx.capturedTexts()[1].toFloat() * 3600 +
+                             rx.capturedTexts()[2].toFloat() * 60 +
+                             rx.capturedTexts()[3].toFloat();
             this->time2progress[time(NULL)] = this->progress;
 
             if (this->duration - this->progress < this->endingLength)
