@@ -97,6 +97,11 @@ protected:
                     }
                 }
 
+                if (keyEvent->key() == Qt::Key_F5)
+                {
+                    this->model->forceUpdate();
+                }
+
                 if (keyEvent->key() == Qt::Key_Delete)
                 {
                     auto index = this->view->currentIndex();

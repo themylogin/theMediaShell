@@ -11,13 +11,15 @@ MediaModel::MediaModel(QString rootPath, QObject *parent)
     : QSortFilterProxyModel(parent),
       QFileSystemProxyModelMixin(this)
 {
+    this->rootPath = rootPath;
+
     QVector<int> columnMap(4);
     columnMap[0] = 0;
     columnMap[1] = 1;
     columnMap[2] = 1;
     columnMap[3] = 3;
     this->fsModel = new QFileSystemModelWithMappedColumns(columnMap);
-    this->fsModel->setRootPath(rootPath);
+    this->fsModel->setRootPath(this->rootPath);
     this->setSourceModel(this->fsModel);
     this->setSourceFileSystemModel(this->fsModel);
 
@@ -93,6 +95,12 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
     }
 
     return QSortFilterProxyModel::data(index, role);
+}
+
+void MediaModel::forceUpdate()
+{
+    this->fsModel->setRootPath("");
+    this->fsModel->setRootPath(this->rootPath);
 }
 
 bool MediaModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const

@@ -15,11 +15,13 @@ public:
 
     QModelIndex rootIndex() const;
     QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const;
+    void forceUpdate();
 
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const;
 
 private:
+    QString rootPath;
     QFileSystemModel* fsModel;
 
     bool isMovie(const QModelIndex& sourceIndex) const;
