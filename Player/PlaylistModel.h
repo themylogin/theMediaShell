@@ -148,22 +148,9 @@ public:
         emit dataChanged(this->createIndex(0, 0), this->createIndex(this->rowCount() - 1, this->columnCount() - 1)); // TODO: We can provide more accurate information
     }
 
-    void notify(const QDateTime& currentDateTime, float firstItemProgress)
+    void notify(const QDateTime& currentDateTime, double firstItemRemaining)
     {
-        if (this->playlist.isEmpty())
-        {
-            this->firstItemWillEndAt = QDateTime();
-            return;
-        }
-
-        float firstItemDuration = this->playlist[0]->duration;
-        if (isnan(firstItemDuration))
-        {
-            this->firstItemWillEndAt = QDateTime();
-            return;
-        }
-
-        QDateTime newFirstItemWillEndAt = currentDateTime.addMSecs((firstItemDuration - firstItemProgress) * 1000);
+        QDateTime newFirstItemWillEndAt = currentDateTime.addMSecs(firstItemRemaining * 1000);
         if (this->firstItemWillEndAt.isNull() ||
             abs(newFirstItemWillEndAt.toMSecsSinceEpoch() - this->firstItemWillEndAt.toMSecsSinceEpoch()) > 1000)
         {

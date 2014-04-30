@@ -35,6 +35,8 @@
 
 #include <qjson/serializer.h>
 
+#include "mpv/client.h"
+
 #include "Player/PlaylistItem.h"
 #include "Player/PlaylistModel.h"
 #include "MediaDb.h"
@@ -198,13 +200,13 @@ public:
 
         QtConcurrent::run(this, &PlayerWindow::determineDurations, playlist);
 
-        connect(&this->timer, SIGNAL(timeout()), this, SLOT(notifyPlaylist()));
-        connect(&this->process, SIGNAL(readyReadStandardOutput()), this, SLOT(readProcessStandardOutput()));
-        connect(&this->process, SIGNAL(readyReadStandardError()), this, SLOT(readProcessStandardError()));
-        connect(&this->process, SIGNAL(finished(int)), this, SLOT(processFinished()));
+        this->mpv = NULL;
         this->progress = 0;
+        this->duration = 0;
+        this->remaining = 0;
+        connect(&this->timer, SIGNAL(timeout()), this, SLOT(checkEvents()));
 
-        this->timer.start(1000);
+        this->timer.start(100);
         this->play();
 
         this->stopShortcut = new QxtGlobalShortcut(this);
@@ -318,11 +320,11 @@ private:
     QTableWidget* helpTable;
 
     QTimer timer;
-    QProcess process;
-    QDateTime startedAt;
-    float progress;
-    float duration;
-    QMap<time_t, float> time2progress;
+    mpv_handle* mpv;
+
+    double progress;
+    double duration;
+    double remaining;
 
     QxtGlobalShortcut* stopShortcut;
     QxtGlobalShortcut* toggleShortcut;
@@ -333,8 +335,8 @@ private:
     QxtGlobalShortcut* endingShortcut;
 
     QString openingEndingKey;
-    float openingLength;
-    float endingLength;
+    double openingLength;
+    double endingLength;
 
     QList<QProcess*> hooks;
 
@@ -388,11 +390,36 @@ private:
         {
             QString file = this->playlist->getFrontItem()->file;
 
-            QStringList arguments;
+            this->mpv = mpv_create();
+            mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
+
+            mpv_set_option_string(this->mpv, "vo", "vdpau");
+            mpv_set_option_string(this->mpv, "hwdec", "vdpau");
+
+            mpv_set_option_string(this->mpv, "fs", "yes");
+
+            mpv_set_option_string(this->mpv, "channels", "2");
+            mpv_set_option_string(this->mpv, "alang", "ja,jp,jpn,en,eng,ru,rus");
+
+            mpv_set_option_string(this->mpv, "autosub-match", "fuzzy");
+            mpv_set_option_string(this->mpv, "slang", "ru,rus,en,eng");
+
+            mpv_initialize(this->mpv);
+
+            mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
+            mpv_observe_property(this->mpv, 0, "aid", MPV_FORMAT_STRING);
+
+            auto fileUtf8 = file.toUtf8();
+            const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
+            mpv_command(this->mpv, loadCmd);
+
+            mpv_set_option_string(this->mpv, "idle", "no");
+
             if (this->openingLength > 0)
             {
-                arguments.append("--start");
-                arguments.append(QString::number(this->openingLength));
+                auto secondsUtf8 = QString::number(this->openingLength).toUtf8();
+                const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
+                mpv_command(this->mpv, seekCmd);
             }
             else if (MediaDb::getInstance().contains(file, "progress"))
             {
@@ -400,15 +427,20 @@ private:
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
                 if (progress / duration < 0.85)
                 {
-                    arguments.append("--start");
-                    arguments.append(QString::number(progress));
+                    auto secondsUtf8 = QString::number(progress).toUtf8();
+                    const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
+                    mpv_command(this->mpv, seekCmd);
                 }
             }
-            arguments.append("-identify");
-            arguments.append(file);
 
-            this->startedAt = QDateTime::currentDateTime();
-            this->process.start("mpv", arguments);
+            if (MediaDb::getInstance().contains(this->playlistName, "aid"))
+            {
+                mpv_set_property_string(this->mpv, "aid", MediaDb::getInstance().get(this->playlistName, "aid").toString().toUtf8().constData());
+            }
+
+            this->progress = 0;
+            this->duration = 0;
+            this->remaining = 0;
         }
         else
         {
@@ -447,9 +479,54 @@ private slots:
         this->showTemporarily();
     }
 
-    void notifyPlaylist()
+    void checkEvents()
     {
-        this->playlist->notify(QDateTime::currentDateTime(), this->progress);
+        if (this->mpv != NULL)
+        {
+            mpv_event* event = mpv_wait_event(this->mpv, 0);
+
+            if (event->event_id == MPV_EVENT_SHUTDOWN)
+            {
+                mpv_destroy(this->mpv);
+                this->mpv = NULL;
+
+                auto finishedPlaylistItem = this->playlist->getFrontItem();
+
+                MediaDb::getInstance().set(finishedPlaylistItem->file, "progress", this->progress);
+
+                this->playlist->popFrontItem();
+                this->play();
+                return;
+            }
+
+            if (event->event_id == MPV_EVENT_PROPERTY_CHANGE)
+            {
+                mpv_event_property* property_event = (mpv_event_property*)event->data;
+
+                if (property_event->name == QLatin1String("length"))
+                {
+                    this->duration = *((double*)property_event->data);
+                }
+
+                if (property_event->name == QLatin1String("aid"))
+                {
+                    MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+                }
+            }
+
+            mpv_get_property(this->mpv, "time-pos", MPV_FORMAT_DOUBLE, &this->progress);
+            mpv_get_property(this->mpv, "playtime-remaining", MPV_FORMAT_DOUBLE, &this->remaining);
+
+            if (this->duration > 0 &&
+                this->progress > 0 &&
+                this->duration - this->progress < this->endingLength)
+            {
+                const char* quitCmd[] = {"quit", NULL};
+                mpv_command(this->mpv, quitCmd);
+            }
+
+            this->playlist->notify(QDateTime::currentDateTime(), this->remaining);
+        }
     }
 
     void drawOpeningEndingLength()
@@ -457,85 +534,13 @@ private slots:
         this->helpTable->setItem(4, 1, new QTableWidgetItem(QString::fromUtf8("Опенинг (%1 с.) / титры (%2 с.)").arg((int)this->openingLength).arg((int)this->endingLength)));
     }
 
-    void readProcessStandardOutput()
-    {
-        QString stdout = QString::fromUtf8(this->process.readAllStandardOutput());
-
-        float duration;
-        if (this->findDuration(stdout, duration))
-        {
-            this->duration = duration;
-        }
-    }
-
-    void readProcessStandardError()
-    {
-        QString stderr = QString::fromUtf8(this->process.readAllStandardError());
-
-        QRegExp rx("V: ([0-9]+):([0-9]+):([0-9]+)");
-        if (rx.lastIndexIn(stderr) != -1)
-        {
-            this->progress = rx.capturedTexts()[1].toFloat() * 3600 +
-                             rx.capturedTexts()[2].toFloat() * 60 +
-                             rx.capturedTexts()[3].toFloat();
-            this->time2progress[time(NULL)] = this->progress;
-
-            if (this->duration - this->progress < this->endingLength)
-            {
-                this->process.write("quit\n");
-            }
-        }
-    }
-
-    void processFinished()
-    {
-        auto finishedPlaylistItem = this->playlist->getFrontItem();
-
-        QList<QVariant> pauses;
-        int previous_unpaused_time = -1;
-        foreach (auto time, this->time2progress.keys())
-        {
-            if (previous_unpaused_time != -1)
-            {
-                const int SIGNIFICANT_PAUSE_LENGTH = 10;
-                if (time - previous_unpaused_time >= SIGNIFICANT_PAUSE_LENGTH)
-                {
-                    QVariantMap pause;
-                    pause["start"] = (int)previous_unpaused_time;
-                    pause["end"] = (int)time;
-                    pauses.append(pause);
-                }
-            }
-
-            previous_unpaused_time = time;
-        }
-
-        QVariantMap json;
-        json["start"] = this->startedAt.toTime_t();
-        json["end"] = QDateTime::currentDateTime().toTime_t();
-        json["pauses"] = pauses;
-        json["progress"] = this->progress;
-        json["duration"] = finishedPlaylistItem->duration;
-
-        QProcess* hook = new QProcess;
-        hook->start(this->getHookPath("post-mplayer"),
-                    QStringList() << finishedPlaylistItem->file);
-        QJson::Serializer serializer;
-        hook->write(serializer.serialize(json));
-        hook->closeWriteChannel();
-        this->hooks.append(hook);
-
-        MediaDb::getInstance().set(finishedPlaylistItem->file, "progress", this->progress);
-
-        this->playlist->popFrontItem();
-        this->play();
-    }
-
     void stop()
     {
         this->powerOffOnFinish = false; // manual interruption is not finish
         this->playlist->setActiveCount(1);
-        this->process.kill();
+
+        const char* quitCmd[] = {"quit", NULL};
+        mpv_command(this->mpv, quitCmd);
     }
 
     void toggle()
