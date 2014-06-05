@@ -119,6 +119,21 @@ protected:
                         this->model->remove(index);
                     }
                 }
+
+                if (keyEvent->key() == Qt::Key_Backspace)
+                {
+                    auto index = this->view->currentIndex();
+                    if (!this->model->isDir(index))
+                    {
+                        index = index.parent();
+                    }
+                    if (index.isValid())
+                    {
+                        auto playlistTitle = this->model->filePath(index);
+                        MediaDb::getInstance().del(playlistTitle, "openingLength");
+                        MediaDb::getInstance().del(playlistTitle, "endingLength");
+                    }
+                }
             }
         }
 

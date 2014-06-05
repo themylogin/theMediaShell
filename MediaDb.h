@@ -34,12 +34,21 @@ public:
     {
         db[path][key] = value;
 
-        this->file.open(QIODevice::WriteOnly);
-        QDataStream out(&this->file);
-        out << this->db;
-        this->file.close();
+        sync();
 
         emit keyChangedForPath(path, key);
+    }
+
+    void del(QString path, QString key)
+    {
+        if (this->contains(path, key))
+        {
+            db[path].remove(key);
+
+            sync();
+
+            emit keyChangedForPath(path, key);
+        }
     }
 
 private:
@@ -63,6 +72,14 @@ private:
     }
     MediaDb(const MediaDb&);
     MediaDb& operator=(const MediaDb&);
+
+    void sync()
+    {
+        this->file.open(QIODevice::WriteOnly);
+        QDataStream out(&this->file);
+        out << this->db;
+        this->file.close();
+    }
 
     QFile file;
     QMap<QString, QMap<QString, QVariant>> db;
