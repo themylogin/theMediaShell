@@ -46,15 +46,42 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
         if (index.column() == 1)
         {
             QString path = this->filePath(index);
-            if (MediaDb::getInstance().contains(path, "duration") && MediaDb::getInstance().contains(path, "progress"))
+
+            QString playlistName;
+            if (!this->isDir(index))
             {
-                return Utils::formatDuration(MediaDb::getInstance().get(path, "progress").toFloat()) + " / " +
-                       Utils::formatDuration(MediaDb::getInstance().get(path, "duration").toFloat());
+                if (index.parent().isValid())
+                {
+                    playlistName = this->filePath(index.parent());
+                }
+            }
+
+            QString value;
+            if (MediaDb::getInstance().contains(path, "progress"))
+            {
+                value = Utils::formatDuration(MediaDb::getInstance().get(path, "progress").toFloat());
+            }
+            else if (!playlistName.isEmpty() && MediaDb::getInstance().contains(playlistName, "openingLength"))
+            {
+                value = Utils::formatDuration(MediaDb::getInstance().get(playlistName, "openingLength").toFloat());
             }
             else
             {
                 return "";
             }
+
+            value += " / ";
+
+            if (MediaDb::getInstance().contains(path, "duration"))
+            {
+                value += Utils::formatDuration(MediaDb::getInstance().get(path, "duration").toFloat());
+            }
+            else
+            {
+                value += "--:--";
+            }
+
+            return value;
         }
 
         if (index.column() == 3)
@@ -87,7 +114,7 @@ QVariant MediaModel::data(const QModelIndex& index, int role) const
         QString path = this->filePath(index);
         if (MediaDb::getInstance().contains(path, "duration") && MediaDb::getInstance().contains(path, "progress"))
         {
-            if (MediaDb::getInstance().get(path, "progress").toFloat() / MediaDb::getInstance().get(path, "duration").toFloat() > 0.85)
+            if (Utils::isWatched(MediaDb::getInstance().get(path, "progress").toFloat(), MediaDb::getInstance().get(path, "duration").toFloat()))
             {
                 return QColor(160, 160, 160);
             }

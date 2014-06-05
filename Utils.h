@@ -11,6 +11,8 @@ namespace Utils
 {
     bool isMovie(QString path);
 
+    bool isWatched(float progress, float duration);
+
     QString formatDuration(int duration);
     QStringList listSubdirectories(QDir directory);
     QProcess* runMplayer(const QString& file, const QStringList& userArguments = QStringList());

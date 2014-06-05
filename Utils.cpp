@@ -29,6 +29,11 @@ namespace Utils
         return false;
     }
 
+    bool isWatched(float progress, float duration)
+    {
+        return progress / duration > 0.9 || duration - progress < 60;
+    }
+
     QString formatDuration(int duration)
     {
         return QString("%1:%2").arg(duration / 60, 2, 10, QChar('0')).arg(duration % 60, 2, 10, QChar('0'));

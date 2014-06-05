@@ -40,6 +40,7 @@
 #include "Player/PlaylistItem.h"
 #include "Player/PlaylistModel.h"
 #include "MediaDb.h"
+#include "Utils.h"
 
 class PlayerWindow : public QWidget
 {
@@ -420,7 +421,7 @@ private:
             {
                 float progress = MediaDb::getInstance().get(file, "progress").toFloat();
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
-                if (progress / duration < 0.9 || duration - progress > 60)
+                if (!Utils::isWatched(progress, duration))
                 {
                     auto secondsUtf8 = QString::number(progress).toUtf8();
                     const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
