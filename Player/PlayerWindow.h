@@ -1,8 +1,8 @@
 #ifndef PLAYERWINDOW_H
 #define PLAYERWINDOW_H
 
-#include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/time.h>
 
 #include <algorithm>
 #include <cmath>
@@ -30,6 +30,7 @@
 #include <QWidget>
 
 #include <QtConcurrentRun>
+#include <QtNetwork>
 
 #include <QxtGlobalShortcut>
 
@@ -200,16 +201,6 @@ public:
         }
 
         QtConcurrent::run(this, &PlayerWindow::determineDurations, playlist);
-
-        this->mpv = NULL;
-        this->progress = 0;
-        this->duration = 0;
-        this->remaining = 0;
-        connect(&this->timer, SIGNAL(timeout()), this, SLOT(checkEvents()));
-
-        this->timer.start(100);
-        this->play();
-
         this->stopShortcut = new QxtGlobalShortcut(this);
         this->stopShortcut->setShortcut(QKeySequence("q"));
         connect(this->stopShortcut, SIGNAL(activated()), this, SLOT(stop()));
@@ -234,6 +225,27 @@ public:
 
         this->showTemporarilyTimer.setInterval(5000);
         connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
+
+        if (getenv("THEMYLOG"))
+        {
+            auto address = QString::fromLatin1(getenv("THEMYLOG"));
+            this->themylogSocket = new QUdpSocket(this);
+            this->themylogAddress = QHostAddress(address.split(':')[0]);
+            this->themylogPort = address.split(':')[1].toUInt();
+        }
+        else
+        {
+            this->themylogSocket = NULL;
+        }
+
+        this->mpv = NULL;
+        this->progress = 0;
+        this->duration = 0;
+        this->remaining = 0;
+        connect(&this->timer, SIGNAL(timeout()), this, SLOT(checkEvents()));
+
+        this->timer.start(100);
+        this->play();
     }
 
 public slots:
@@ -344,6 +356,11 @@ private:
     QTimer showTemporarilyTimer;
     QTimer closeTimer;
 
+    QUdpSocket* themylogSocket;
+    QHostAddress themylogAddress;
+    quint16 themylogPort;
+    QDateTime themylogLastNotify;
+
     bool findDuration(QString stdout, float& duration)
     {
         QRegExp rx("ID_LENGTH=([0-9]+)");
@@ -446,6 +463,15 @@ private:
             this->progress = 0;
             this->duration = 0;
             this->remaining = 0;
+
+            auto fi = QFileInfo(file);
+            this->themylog(QString("application=theMediaShell\n"
+                                   "logger=movie\n"
+                                   "level=info\n"
+                                   "msg=start\n"
+                                   "movie=%1\n"
+                                   "downloaded_at=%2").arg(file)
+                                                      .arg(fi.lastModified().toTime_t()));
         }
         else
         {
@@ -464,6 +490,14 @@ private:
     QString getHookPath(QString hookName)
     {
         return QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
+    }
+
+    void themylog(QString string)
+    {
+        if (this->themylogSocket)
+        {
+            this->themylogSocket->writeDatagram(string.toUtf8(), this->themylogAddress, this->themylogPort);
+        }
     }
 
 private slots:
@@ -498,6 +532,19 @@ private slots:
                 auto finishedPlaylistItem = this->playlist->getFrontItem();
 
                 MediaDb::getInstance().set(finishedPlaylistItem->file, "progress", this->progress);
+
+                auto fi = QFileInfo(finishedPlaylistItem->file);
+                this->themylog(QString("application=theMediaShell\n"
+                                       "logger=movie\n"
+                                       "level=info\n"
+                                       "msg=end\n"
+                                       "movie=%1\n"
+                                       "downloaded_at=%2\n"
+                                       "progress=%3\n"
+                                       "duration=%4").arg(finishedPlaylistItem->file)
+                                                     .arg(fi.lastModified().toTime_t())
+                                                     .arg(this->progress)
+                                                     .arg(this->duration));
 
                 this->playlist->popFrontItem();
                 this->play();
@@ -534,6 +581,20 @@ private slots:
             }
 
             this->playlist->notify(QDateTime::currentDateTime(), this->remaining);
+
+            if (this->themylogLastNotify.msecsTo(QDateTime::currentDateTime()) >= 1000)
+            {
+                this->themylog(QString("application=theMediaShell\n"
+                                       "logger=movie\n"
+                                       "level=info\n"
+                                       "msg=progress\n"
+                                       "movie=%1\n"
+                                       "progress=%2\n"
+                                       "duration=%3").arg(this->playlist->getFrontItem()->file)
+                                                     .arg(this->progress)
+                                                     .arg(this->duration));
+                this->themylogLastNotify = QDateTime::currentDateTime();
+            }
         }
     }
 
