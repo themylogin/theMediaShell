@@ -577,22 +577,24 @@ private slots:
 
     void openingEndsHere()
     {
-        this->openingLength = this->progress;
         if (this->playlistName != "")
         {
+            this->openingLength = this->progress;
             MediaDb::getInstance().set(this->playlistName, "openingLength", this->openingLength);
+            this->drawOpeningEndingLength();
+            this->showTemporarily();
         }
-        this->drawOpeningEndingLength();
     }
 
     void endingStartsHere()
     {
-        this->endingLength = this->duration - this->progress;
         if (this->playlistName != "")
         {
+            this->endingLength = this->duration - this->progress;
             MediaDb::getInstance().set(this->playlistName, "endingLength", this->endingLength);
+            this->drawOpeningEndingLength();
+            this->showTemporarily();
         }
-        this->drawOpeningEndingLength();
     }
 };
 
