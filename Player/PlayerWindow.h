@@ -403,6 +403,7 @@ private:
 
             mpv_set_option_string(this->mpv, "autosub-match", "fuzzy");
             mpv_set_option_string(this->mpv, "slang", "ru,rus,en,eng");
+            mpv_set_option_string(this->mpv, "subcp", "enca:ru");
 
             mpv_initialize(this->mpv);
 
@@ -433,9 +434,12 @@ private:
                 }
             }
 
-            if (MediaDb::getInstance().contains(this->playlistName, "aid"))
+            if (this->playlistName != "")
             {
-                mpv_set_property_string(this->mpv, "aid", MediaDb::getInstance().get(this->playlistName, "aid").toString().toUtf8().constData());
+                if (MediaDb::getInstance().contains(this->playlistName, "aid"))
+                {
+                    mpv_set_property_string(this->mpv, "aid", MediaDb::getInstance().get(this->playlistName, "aid").toString().toUtf8().constData());
+                }
             }
 
             this->progress = 0;
@@ -510,7 +514,10 @@ private slots:
 
                 if (property_event->name == QLatin1String("aid"))
                 {
-                    MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+                    if (this->playlistName != "")
+                    {
+                        MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+                    }
                 }
             }
 
