@@ -426,7 +426,7 @@ private:
             {
                 float progress = MediaDb::getInstance().get(file, "progress").toFloat();
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
-                if (progress / duration < 0.85)
+                if (progress / duration < 0.9 || duration - progress > 60)
                 {
                     auto secondsUtf8 = QString::number(progress).toUtf8();
                     const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
