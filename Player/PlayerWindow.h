@@ -416,13 +416,7 @@ private:
 
             mpv_set_option_string(this->mpv, "idle", "no");
 
-            if (this->openingLength > 0)
-            {
-                auto secondsUtf8 = QString::number(this->openingLength).toUtf8();
-                const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
-                mpv_command(this->mpv, seekCmd);
-            }
-            else if (MediaDb::getInstance().contains(file, "progress"))
+            if (MediaDb::getInstance().contains(file, "progress"))
             {
                 float progress = MediaDb::getInstance().get(file, "progress").toFloat();
                 float duration = MediaDb::getInstance().get(file, "duration").toFloat();
@@ -432,6 +426,12 @@ private:
                     const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
                     mpv_command(this->mpv, seekCmd);
                 }
+            }
+            else if (this->openingLength > 0)
+            {
+                auto secondsUtf8 = QString::number(this->openingLength).toUtf8();
+                const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
+                mpv_command(this->mpv, seekCmd);
             }
 
             if (this->playlistName != "")
