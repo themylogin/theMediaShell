@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <mpd/client.h>
+
 #include <QEvent>
 #include <QFile>
 #include <QKeyEvent>

@@ -15,7 +15,8 @@ namespace Utils
                        << ".mov"
                        << ".mp4"
                        << ".ts"
-                       << ".webm";
+                       << ".webm"
+                       << ".wmv";
         }
 
         foreach (auto extension, extensions)
