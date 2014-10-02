@@ -16,7 +16,9 @@ LIBS += -lX11 -lqjson -lmpv
 SOURCES += MediaModel/MediaModel.cpp \
     Application.cpp \
     main.cpp \
-    Utils.cpp
+    Utils.cpp \
+    MainWindow.cpp \
+    Player/PlayerWindow.cpp
 
 HEADERS  += MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     MediaModel/Helper/QFileSystemProxyModelMixin.h \
