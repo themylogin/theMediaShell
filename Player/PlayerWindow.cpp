@@ -220,7 +220,9 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
     }
 
     this->mpv = NULL;
+    this->paused = false;
     this->progress = 0;
+    this->notifiedProgress = 0;
     this->duration = 0;
     this->remaining = 0;
     connect(&this->timer, SIGNAL(timeout()), this, SLOT(checkEvents()));
@@ -354,8 +356,9 @@ void PlayerWindow::play()
 
         mpv_initialize(this->mpv);
 
-        mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
         mpv_observe_property(this->mpv, 0, "aid", MPV_FORMAT_STRING);
+        mpv_observe_property(this->mpv, 0, "pause", MPV_FORMAT_FLAG);
+        mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
 
         auto fileUtf8 = file.toUtf8();
         const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
@@ -389,7 +392,9 @@ void PlayerWindow::play()
             }
         }
 
+        this->paused = false;
         this->progress = 0;
+        this->notifiedProgress = 0;
         this->duration = 0;
         this->remaining = 0;
 
@@ -483,16 +488,45 @@ void PlayerWindow::checkEvents()
         {
             mpv_event_property* property_event = (mpv_event_property*)event->data;
 
-            if (property_event->name == QLatin1String("length"))
-            {
-                this->duration = *((double*)property_event->data);
-            }
-
             if (property_event->name == QLatin1String("aid"))
             {
                 if (this->playlistName != "")
                 {
                     MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+                }
+            }
+
+            if (property_event->name == QLatin1String("length"))
+            {
+                this->duration = *((double*)property_event->data);
+            }
+
+            if (property_event->name == QLatin1String("pause"))
+            {
+                bool paused = *((int*)property_event->data);
+                if (paused != this->paused)
+                {
+                    this->paused = paused;
+
+                    QString msg;
+                    if (this->paused)
+                    {
+                        msg = "pause";
+                    }
+                    else
+                    {
+                        msg = "resume";
+                    }
+                    this->themylog(QString("application=theMediaShell\n"
+                                               "logger=movie\n"
+                                               "level=info\n"
+                                               "msg=%1\n"
+                                               "movie=%2\n"
+                                               "progress=%3\n"
+                                               "duration=%4").arg(msg)
+                                                             .arg(this->playlist->getFrontItem()->file)
+                                                             .arg(this->progress)
+                                                             .arg(this->duration));
                 }
             }
         }
@@ -510,18 +544,23 @@ void PlayerWindow::checkEvents()
 
         this->playlist->notify(QDateTime::currentDateTime(), this->remaining);
 
-        if (this->themylogLastNotify.msecsTo(QDateTime::currentDateTime()) >= 1000)
+        if (!this->paused)
         {
-            this->themylog(QString("application=theMediaShell\n"
-                                   "logger=movie\n"
-                                   "level=info\n"
-                                   "msg=progress\n"
-                                   "movie=%1\n"
-                                   "progress=%2\n"
-                                   "duration=%3").arg(this->playlist->getFrontItem()->file)
-                                                 .arg(this->progress)
-                                                 .arg(this->duration));
-            this->themylogLastNotify = QDateTime::currentDateTime();
+            if ((int)this->progress != (int)this->notifiedProgress)
+            {
+                this->themylog(QString("application=theMediaShell\n"
+                                       "logger=movie\n"
+                                       "level=info\n"
+                                       "msg=progress\n"
+                                       "movie=%1\n"
+                                       "progress=%2\n"
+                                       "remaining=%3\n"
+                                       "duration=%4").arg(this->playlist->getFrontItem()->file)
+                                                     .arg(this->progress)
+                                                     .arg(this->remaining)
+                                                     .arg(this->duration));
+                this->notifiedProgress = this->progress;
+            }
         }
     }
 }

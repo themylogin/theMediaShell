@@ -57,7 +57,9 @@ private:
     QTimer timer;
     mpv_handle* mpv;
 
+    bool paused;
     double progress;
+    double notifiedProgress;
     double duration;
     double remaining;
 
@@ -81,7 +83,6 @@ private:
     QUdpSocket* themylogSocket;
     QHostAddress themylogAddress;
     quint16 themylogPort;
-    QDateTime themylogLastNotify;
 
     bool findDuration(QString stdout, float& duration);
     void determineDurations(QStringList playlist);
