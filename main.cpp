@@ -3,7 +3,7 @@
 #include <QThreadPool>
 
 #include "Application.h"
-#include "MainWindow.h"
+#include "MainWindow/MainWindow.h"
 
 int main(int argc, char* argv[])
 {

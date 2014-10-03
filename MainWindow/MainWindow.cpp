@@ -6,6 +6,7 @@
 #include <QStringList>
 
 #include "MediaDb.h"
+#include "MainWindow/MpdDialog.h"
 #include "Player/PlayerWindow.h"
 #include "Utils.h"
 
@@ -33,6 +34,12 @@ MainWindow::MainWindow(QString mediaPath, QWidget* parent)
     connect(this->view, SIGNAL(activated(QModelIndex)), this, SLOT(mediaActivated(QModelIndex)));
     this->view->installEventFilter(this);
     this->setCentralWidget(this->view);
+
+    QThread* mpdThread = new QThread;
+    this->mpd = new MpdClient();
+    mpd->moveToThread(mpdThread);
+    connect(mpdThread, SIGNAL(started()), mpd, SLOT(run()));
+    mpdThread->start();
 }
 
 bool MainWindow::eventFilter(QObject* object, QEvent* event)
@@ -104,6 +111,7 @@ bool MainWindow::eventFilter(QObject* object, QEvent* event)
                                        Qt::Dialog | Qt::FramelessWindowHint);
                 messageBox.setDefaultButton(QMessageBox::Yes);
                 Utils::setStyleSheetFromFile(&messageBox, "://QMessageBox.qss");
+                Utils::resizeMessageBox(&messageBox);
                 if (messageBox.exec() == QMessageBox::Yes)
                 {
                     this->model->remove(index);
@@ -154,7 +162,7 @@ void MainWindow::mediaActivated(QModelIndex media)
         }
     }
     else
-    {
+    {        
         QString playlistName;
         QString playlistTitle;
         QStringList playlist;
@@ -180,7 +188,33 @@ void MainWindow::mediaActivated(QModelIndex media)
             }
         }
 
-        PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist);
-        Q_UNUSED(playerWindow);
+        bool canPlay = true;
+        this->mpdWasPlaying = false;
+        auto state = this->mpd->getState();
+        if (state.playing)
+        {
+            MpdDialog dialog(playlistTitle, this->mpd, this);
+            Utils::setStyleSheetFromFile(&dialog, "://QMessageBox.qss");
+            dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+            Utils::resizeMessageBox(&dialog);
+            canPlay = dialog.canPlay(&this->mpdWasPlaying);
+        }
+
+        if (canPlay)
+        {
+            PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist);
+            connect(playerWindow, SIGNAL(closing(bool)), this, SLOT(playerWindowClosing(bool)));
+        }
+    }
+}
+
+void MainWindow::playerWindowClosing(bool poweringOff)
+{
+    if (!poweringOff)
+    {
+        if (this->mpdWasPlaying)
+        {
+            this->mpd->resume();
+        }
     }
 }

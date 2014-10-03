@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <QDir>
+#include <QMessageBox>
 #include <QProcess>
 #include <QString>
 #include <QStringList>
@@ -18,6 +19,7 @@ namespace Utils
     QProcess* runMplayer(const QString& file, const QStringList& userArguments = QStringList());
 
     bool setStyleSheetFromFile(QWidget* widget, QString fileName);
+    void resizeMessageBox(QMessageBox* box, int width = 1280);
 }
 
 #endif // UTILS_H

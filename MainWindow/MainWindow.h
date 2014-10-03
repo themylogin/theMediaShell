@@ -1,13 +1,12 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <mpd/client.h>
-
 #include <QEvent>
 #include <QMainWindow>
 #include <QTreeView>
 
 #include "MediaModel/MediaModel.h"
+#include "MpdClient.h"
 
 class MainWindow : public QMainWindow
 {
@@ -23,12 +22,16 @@ private:
     MediaModel* model;
     QTreeView* view;
 
+    MpdClient* mpd;
+    bool mpdWasPlaying;
+
     bool focusFirstItemConnected;
 
 private slots:
     void focusFirstItem();
     void scrollToCurrentItem();
     void mediaActivated(QModelIndex media);
+    void playerWindowClosing(bool poweringOff);
 };
 
 #endif // MAINWINDOW_H

@@ -32,12 +32,7 @@
 PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist, QWidget* parent)
     : QWidget(parent)
 {
-    QFile qss("://Player/PlayerWindow.qss");
-    if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
-    {
-        this->setStyleSheet(qss.readAll());
-        qss.close();
-    }
+    Utils::setStyleSheetFromFile(this, "://Player/PlayerWindow.qss");
 
     this->playlistName = playlistName;
 
@@ -417,6 +412,7 @@ void PlayerWindow::play()
             this->hooks.append(hook);
         }
 
+        emit this->closing(this->powerOffOnFinish);
         this->close();
     }
 }

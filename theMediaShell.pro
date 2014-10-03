@@ -11,14 +11,16 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = theMediaShell
 TEMPLATE = app
 
-LIBS += -lX11 -lqjson -lmpv
+LIBS += -lX11 -lqjson -lmpv -lmpdclient
 
 SOURCES += MediaModel/MediaModel.cpp \
     Application.cpp \
     main.cpp \
     Utils.cpp \
-    MainWindow.cpp \
-    Player/PlayerWindow.cpp
+    Player/PlayerWindow.cpp \
+    MainWindow/MpdDialog.cpp \
+    MainWindow/MainWindow.cpp \
+    MainWindow/MpdClient.cpp
 
 HEADERS  += MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     MediaModel/Helper/QFileSystemProxyModelMixin.h \
@@ -27,9 +29,11 @@ HEADERS  += MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     Player/PlaylistItem.h \
     Player/PlayerWindow.h \
     Application.h \
-    MainWindow.h \
     Utils.h \
-    MediaDb.h
+    MediaDb.h \
+    MainWindow/MpdDialog.h \
+    MainWindow/MainWindow.h \
+    MainWindow/MpdClient.h
 
 FORMS    +=
 

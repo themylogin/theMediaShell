@@ -24,6 +24,9 @@ class PlayerWindow : public QWidget
 public:
     PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist, QWidget* parent = 0);
 
+signals:
+    void closing(bool poweringOff);
+
 public slots:
     void hide();
     void show();

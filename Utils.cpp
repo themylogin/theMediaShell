@@ -1,5 +1,7 @@
 #include "Utils.h"
 
+#include <QGridLayout>
+#include <QSpacerItem>
 #include <QStringList>
 
 namespace Utils
@@ -79,5 +81,12 @@ namespace Utils
             return true;
         }
         return false;
+    }
+
+    void resizeMessageBox(QMessageBox* box, int width)
+    {
+        QSpacerItem* horizontalSpacer = new QSpacerItem(width, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
+        QGridLayout* layout = (QGridLayout*)box->layout();
+        layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
     }
 }
