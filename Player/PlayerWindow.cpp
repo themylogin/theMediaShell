@@ -335,13 +335,20 @@ void PlayerWindow::play()
         QString file = this->playlist->getFrontItem()->file;
 
         this->mpv = mpv_create();
+
+        auto mpv_container = new QWidget();
+        mpv_container->setAttribute(Qt::WA_NativeWindow);
+        mpv_container->showFullScreen();
+        int64_t wid = mpv_container->winId();
+        mpv_set_option(this->mpv, "wid", MPV_FORMAT_INT64, &wid);
+
         mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
         mpv_set_option_string(this->mpv, "input-x11-keyboard", "yes");
 
         mpv_set_option_string(this->mpv, "vo", "vdpau");
         mpv_set_option_string(this->mpv, "hwdec", "vdpau");
 
-        mpv_set_option_string(this->mpv, "fs", "yes");
+        // mpv_set_option_string(this->mpv, "fs", "yes");
 
         mpv_set_option_string(this->mpv, "channels", "2");
         mpv_set_option_string(this->mpv, "alang", "ja,jp,jpn,en,eng,ru,rus");
