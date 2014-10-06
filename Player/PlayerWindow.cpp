@@ -336,6 +336,7 @@ void PlayerWindow::play()
 
         this->mpv = mpv_create();
         mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
+        mpv_set_option_string(this->mpv, "input-x11-keyboard", "yes");
 
         mpv_set_option_string(this->mpv, "vo", "vdpau");
         mpv_set_option_string(this->mpv, "hwdec", "vdpau");
@@ -455,7 +456,7 @@ void PlayerWindow::checkEvents()
 
         if (event->event_id == MPV_EVENT_SHUTDOWN)
         {
-            mpv_destroy(this->mpv);
+            mpv_terminate_destroy(this->mpv);
             this->mpv = NULL;
 
             auto finishedPlaylistItem = this->playlist->getFrontItem();
