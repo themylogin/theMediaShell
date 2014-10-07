@@ -1,9 +1,12 @@
 #ifndef PLAYERWINDOW_H
 #define PLAYERWINDOW_H
 
+#include <functional>
+
 #include <QLabel>
+#include <QMap>
+#include <QMainWindow>
 #include <QHBoxLayout>
-#include <QProcess>
 #include <QTableView>
 #include <QTableWidget>
 #include <QTimer>
@@ -11,13 +14,11 @@
 
 #include <QtNetwork>
 
-#include <QxtGlobalShortcut>
-
 #include "mpv/client.h"
 
 #include "Player/PlaylistModel.h"
 
-class PlayerWindow : public QWidget
+class PlayerWindow : public QMainWindow
 {
     Q_OBJECT
 
@@ -28,92 +29,97 @@ signals:
     void closing(bool poweringOff);
 
 public slots:
-    void hide();
-    void show();
-    void showTemporarily();
-    bool isVisible() const;
+    void showSidebar();
+    void showSidebarTemporarily();
+    void hideSidebar();
 
 protected:
-    void closeEvent(QCloseEvent* event);
+    bool event(QEvent* event);
 
 private:
     QString playlistName;
 
-    QVBoxLayout* layout;
+    // Sidebar
+    QWidget* sidebar;
+    QVBoxLayout* sidebarLayout;
+    QTimer showSidebarTemporarilyTimer;
+    void initSidebar(const QString& playlistTitle, const QStringList& playlist);
 
     QHBoxLayout* clockLayout;
     QLabel* clockLabel;
     QTimer* clockTimer;
     QLabel* powerLabel;
-
     bool powerOffOnFinish;
+    void initClock();
 
     QString title;
     QLabel* titleLabel;
+    void initTitle(const QString& playlistTitle);
 
     PlaylistModel* playlist;
     QTableView* playlistView;
+    void initPlaylist(const QStringList& playlist);
+
+    void determineDurations(QStringList playlist);
+    bool findDuration(QString stdout, float& duration);
 
     QLabel* helpLabel;
     QTableWidget* helpTable;
+    QMap<int, std::function<void ()>> hotkeys;
+    void initHelp();
 
-    QTimer timer;
+    double openingLength;
+    double endingLength;
+    void initOpeningEnding();
+    void drawOpeningEndingLength();
+
+    // Player
+    QWidget* mpvContainer;
     mpv_handle* mpv;
+    void initPlayer();
 
     bool paused;
     double progress;
     double notifiedProgress;
     double duration;
     double remaining;
+    void resetPlayerProperties();
 
-    QxtGlobalShortcut* stopShortcut;
-    QxtGlobalShortcut* toggleShortcut;
-    QxtGlobalShortcut* powerOffOnFinishShortcut;
-    QxtGlobalShortcut* planLessShortcut;
-    QxtGlobalShortcut* planMoreShortcut;    
-    QxtGlobalShortcut* openingShortcut;
-    QxtGlobalShortcut* endingShortcut;
+    void play();
+    void createMpv(const QString& file);
+    void tuneMpv(const QString& file);
+    void handleMpvEvent(mpv_event* event);
 
-    QString openingEndingKey;
-    double openingLength;
-    double endingLength;
-
-    QList<QProcess*> hooks;
-
-    QTimer showTemporarilyTimer;
-    QTimer closeTimer;
-
+    // themylog
     QUdpSocket* themylogSocket;
     QHostAddress themylogAddress;
     quint16 themylogPort;
+    void initThemylog();
 
-    bool findDuration(QString stdout, float& duration);
-    void determineDurations(QStringList playlist);
+    void themylog(const QString& logger, const QString& level, const QString& msg, const QString& movie, const QMap<QString, QString>& args);
+    void themylog(const QString& msg, const QString& movie, const QMap<QString, QString>& args);
 
-    void play();
+    QMap<QString, QString> withProgresDuration(QMap<QString, QString> args);
+    QMap<QString, QString> withDownloadedAt(QMap<QString, QString> args, QString file);
 
-    QString getHookPath(QString hookName);
+    // Hooks
+    void runHook(const QString& hookName);
 
-    void themylog(QString string);
 
 private slots:
+    // Sidebar
     void updateClockLabel();
     void updatePowerLabel();
     void togglePowerOffOnFinish();
+    void toggleSidebar();
 
-    void checkEvents();
-
-    void drawOpeningEndingLength();
-
+    // Player
     void stop();
-
-    void toggle();
 
     void planLess();
     void planMore();
 
     void openingEndsHere();
-
     void endingStartsHere();
 };
 

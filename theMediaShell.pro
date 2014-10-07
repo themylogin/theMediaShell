@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = theMediaShell
 TEMPLATE = app
 
-LIBS += -lX11 -lqjson -lmpv -lmpdclient
+LIBS += -lX11 -lmpv -lmpdclient
 
 SOURCES += MediaModel/MediaModel.cpp \
     Application.cpp \
@@ -37,15 +37,12 @@ HEADERS  += MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
 
 FORMS    +=
 
-QMAKE_CXXFLAGS += -std=c++0x
-
-CONFIG  += qxt
-QXT     += core gui
+QMAKE_CXXFLAGS += -std=c++11
 
 RESOURCES += \
     main.qrc
 
 OTHER_FILES += \
     MainWindow.qss \
-    Player/PlayerWindow.qss \
+    Player/PlayerWindowSidebar.qss \
     QMessageBox.qss

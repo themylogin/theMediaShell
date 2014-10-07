@@ -17,28 +17,62 @@
 #include <QList>
 #include <QHeaderView>
 #include <QPair>
+#include <QProcess>
 #include <QRegExp>
 #include <QStringList>
 #include <QWidget>
+#include <QX11Info>
 
 #include <QtConcurrentRun>
-
-#include <qjson/serializer.h>
 
 #include "Player/PlaylistItem.h"
 #include "MediaDb.h"
 #include "Utils.h"
 
 PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist, QWidget* parent)
-    : QWidget(parent)
-{
-    Utils::setStyleSheetFromFile(this, "://Player/PlayerWindow.qss");
-
+    : QMainWindow(parent)
+{    
     this->playlistName = playlistName;
 
-    this->layout = new QVBoxLayout;
-    this->setLayout(layout);
+    this->setAttribute(Qt::WA_DeleteOnClose);
+    this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    this->showFullScreen();
 
+    this->initPlayer();
+
+    this->initSidebar(playlistTitle, playlist);
+    if (this->playlist->rowCount() > 1)
+    {
+        this->showSidebarTemporarily();
+    }
+
+    this->initThemylog();
+
+    this->play();
+}
+
+void PlayerWindow::initSidebar(const QString& playlistTitle, const QStringList& playlist)
+{
+    this->sidebar = new QWidget(this);
+    this->sidebar->move(1280, 0);
+    this->sidebar->setFixedSize(640, 1080);
+    this->sidebar->setFocusPolicy(Qt::NoFocus);
+    Utils::setStyleSheetFromFile(this->sidebar, "://Player/PlayerWindowSidebar.qss");
+
+    this->sidebarLayout = new QVBoxLayout;
+    this->sidebar->setLayout(this->sidebarLayout);
+
+    this->showSidebarTemporarilyTimer.setInterval(5000);
+    connect(&this->showSidebarTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hideSidebar()));
+
+    this->initClock();
+    this->initTitle(playlistTitle);
+    this->initPlaylist(playlist);
+    this->initHelp();
+}
+
+void PlayerWindow::initClock()
+{
     this->clockLayout = new QHBoxLayout;
     this->clockLabel = new QLabel(this);
     this->clockLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -5px; margin-bottom: -5px; }");
@@ -49,21 +83,57 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
     connect(this->clockTimer, SIGNAL(timeout()), this, SLOT(updateClockLabel()));
     this->clockTimer->start();
     this->updateClockLabel();
+
     this->powerLabel = new QLabel(this);
     this->powerLabel->setPixmap(QPixmap::fromImage(QImage("://power.png")));
     this->clockLayout->addWidget(this->powerLabel);
     this->powerOffOnFinish = false;
     this->updatePowerLabel();
     this->clockLayout->addStretch();
-    this->layout->addLayout(this->clockLayout);
+    this->sidebarLayout->addLayout(this->clockLayout);
+}
 
+void PlayerWindow::updateClockLabel()
+{
+    this->clockLabel->setText(QDateTime::currentDateTime().toString("hh:mm"));
+}
+
+void PlayerWindow::updatePowerLabel()
+{
+    this->powerLabel->setVisible(this->powerOffOnFinish);
+}
+
+void PlayerWindow::togglePowerOffOnFinish()
+{
+    this->powerOffOnFinish = !this->powerOffOnFinish;
+    this->updatePowerLabel();
+    this->showSidebarTemporarily();
+}
+
+void PlayerWindow::toggleSidebar()
+{
+    if (this->sidebar->isVisible())
+    {
+        this->sidebar->hide();
+    }
+    else
+    {
+        this->sidebar->show();
+    }
+}
+
+void PlayerWindow::initTitle(const QString &playlistTitle)
+{
     this->title = playlistTitle;
     this->titleLabel = new QLabel(this);
     this->titleLabel->setText(this->title);
     this->titleLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -5px; margin-bottom: -5px; }");
     this->titleLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-    this->layout->addWidget(this->titleLabel);
+    this->sidebarLayout->addWidget(this->titleLabel);
+}
 
+void PlayerWindow::initPlaylist(const QStringList& playlist)
+{
     // find common prefix among playlist items file names
     QString prefix = playlist[0].split("/").last();
     while (prefix.length() > 0)
@@ -121,184 +191,9 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
     this->playlistView->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->playlistView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     this->playlistView->setMaximumHeight(590);
-    this->layout->addWidget(this->playlistView, 1);
-
-    this->helpLabel = new QLabel(this);
-    this->helpLabel->setText(QString::fromUtf8("Комбинации клавиш"));
-    this->helpLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -30px; padding-top: 30px; }");
-    this->helpLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-    this->layout->addWidget(this->helpLabel);
-
-    this->helpTable = new QTableWidget(this);
-    this->helpTable->horizontalHeader()->hide();
-    this->helpTable->verticalHeader()->hide();
-    this->helpTable->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
-    this->helpTable->setShowGrid(false);
-    this->helpTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    this->helpTable->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    this->helpTable->setColumnCount(2);
-    this->helpTable->setRowCount(5);
-    this->helpTable->setColumnWidth(0, 110);
-    this->helpTable->setColumnWidth(1, 520);
-    this->helpTable->setItem(0, 0, new QTableWidgetItem(QString::fromUtf8("#/j")));
-    this->helpTable->setItem(0, 1, new QTableWidgetItem(QString::fromUtf8("Выбор аудио / субтитров")));
-    this->helpTable->setItem(1, 0, new QTableWidgetItem(QString::fromUtf8("-/+")));
-    this->helpTable->setItem(1, 1, new QTableWidgetItem(QString::fromUtf8("Задержка аудиодорожки")));
-    this->helpTable->setItem(2, 0, new QTableWidgetItem(QString::fromUtf8("z/x")));
-    this->helpTable->setItem(2, 1, new QTableWidgetItem(QString::fromUtf8("Задержка субтитров")));
-    this->helpTable->setItem(3, 0, new QTableWidgetItem(QString::fromUtf8("a/s")));
-    this->helpTable->setItem(3, 1, new QTableWidgetItem(QString::fromUtf8("Больше/меньше серий")));
-    this->helpTable->setItem(4, 0, new QTableWidgetItem(QString::fromUtf8("w/e")));
-    this->openingLength = 0;
-    this->endingLength = 0;
-    if (this->playlistName != "")
-    {
-        if (MediaDb::getInstance().contains(this->playlistName, "openingLength"))
-        {
-            this->openingLength = MediaDb::getInstance().get(this->playlistName, "openingLength").toFloat();
-        }
-        if (MediaDb::getInstance().contains(this->playlistName, "endingLength"))
-        {
-            this->endingLength = MediaDb::getInstance().get(this->playlistName, "endingLength").toFloat();
-        }
-    }
-    this->drawOpeningEndingLength();
-    this->helpTable->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    this->helpTable->setFixedSize(620, 238);
-    this->layout->addWidget(this->helpTable);
-
-    this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint);
-    this->setFixedSize(640, 1080);
-    this->QWidget::show();
-    this->hide();
-    if (this->playlist->rowCount() > 1)
-    {
-        this->showTemporarily();
-    }
+    this->sidebarLayout->addWidget(this->playlistView, 1);
 
     QtConcurrent::run(this, &PlayerWindow::determineDurations, playlist);
-    this->stopShortcut = new QxtGlobalShortcut(this);
-    this->stopShortcut->setShortcut(QKeySequence("q"));
-    connect(this->stopShortcut, SIGNAL(activated()), this, SLOT(stop()));
-    this->toggleShortcut = new QxtGlobalShortcut(this);
-    this->toggleShortcut->setShortcut(QKeySequence("o"));
-    connect(this->toggleShortcut, SIGNAL(activated()), this, SLOT(toggle()));
-    this->powerOffOnFinishShortcut = new QxtGlobalShortcut(this);
-    this->powerOffOnFinishShortcut->setShortcut(QKeySequence("p"));
-    connect(this->powerOffOnFinishShortcut, SIGNAL(activated()), this, SLOT(togglePowerOffOnFinish()));
-    this->planLessShortcut = new QxtGlobalShortcut(this);
-    this->planLessShortcut->setShortcut(QKeySequence("a"));
-    connect(this->planLessShortcut, SIGNAL(activated()), this, SLOT(planLess()));
-    this->planMoreShortcut = new QxtGlobalShortcut(this);
-    this->planMoreShortcut->setShortcut(QKeySequence("s"));
-    connect(this->planMoreShortcut, SIGNAL(activated()), this, SLOT(planMore()));
-    this->openingShortcut = new QxtGlobalShortcut(this);
-    this->openingShortcut->setShortcut(QKeySequence("w"));
-    connect(this->openingShortcut, SIGNAL(activated()), this, SLOT(openingEndsHere()));
-    this->endingShortcut = new QxtGlobalShortcut(this);
-    this->endingShortcut->setShortcut(QKeySequence("e"));
-    connect(this->endingShortcut, SIGNAL(activated()), this, SLOT(endingStartsHere()));
-
-    this->showTemporarilyTimer.setInterval(5000);
-    connect(&this->showTemporarilyTimer, SIGNAL(timeout()), this, SLOT(hide()));
-
-    if (getenv("THEMYLOG"))
-    {
-        auto address = QString::fromLatin1(getenv("THEMYLOG"));
-        this->themylogSocket = new QUdpSocket(this);
-        this->themylogAddress = QHostAddress(address.split(':')[0]);
-        this->themylogPort = address.split(':')[1].toUInt();
-    }
-    else
-    {
-        this->themylogSocket = NULL;
-    }
-
-    this->mpv = NULL;
-    this->paused = false;
-    this->progress = 0;
-    this->notifiedProgress = 0;
-    this->duration = 0;
-    this->remaining = 0;
-    connect(&this->timer, SIGNAL(timeout()), this, SLOT(checkEvents()));
-
-    this->timer.start(100);
-    this->play();
-}
-
-void PlayerWindow::hide()
-{
-    // QApplication::lastWindowClosed() is emited when the last VISIBLE primary window is closed, so this should always be "visible"
-    this->move(1920, 0);
-    this->showTemporarilyTimer.stop();
-}
-
-void PlayerWindow::show()
-{
-    this->move(1280, 0);
-    this->showTemporarilyTimer.stop();
-}
-
-void PlayerWindow::showTemporarily()
-{
-    if (!this->isVisible())
-    {
-        this->show();
-        this->showTemporarilyTimer.start();
-    }
-    else if (this->showTemporarilyTimer.isActive())
-    {
-        // reload timer if already temporarily shown
-        this->showTemporarilyTimer.start();
-    }
-}
-
-bool PlayerWindow::isVisible() const
-{
-    return this->pos().x() == 1280;
-}
-
-void PlayerWindow::closeEvent(QCloseEvent* event)
-{
-    foreach (auto hook, this->hooks)
-    {
-        if (hook->state() != QProcess::NotRunning)
-        {
-            if (!this->closeTimer.isActive())
-            {
-                connect(&this->closeTimer, SIGNAL(timeout()), this, SLOT(close()));
-                this->closeTimer.start(100);
-            }
-            event->ignore();
-            this->hide();
-            return;
-        }
-    }
-
-    this->closeTimer.stop();
-    event->accept();
-
-    delete this->stopShortcut;
-    delete this->toggleShortcut;
-    delete this->powerOffOnFinishShortcut;
-    delete this->planLessShortcut;
-    delete this->planMoreShortcut;
-    delete this->openingShortcut;
-    delete this->endingShortcut;
-}
-
-bool PlayerWindow::findDuration(QString stdout, float& duration)
-{
-    QRegExp rx("ID_LENGTH=([0-9]+)");
-    if (rx.lastIndexIn(stdout) != -1)
-    {
-        duration = rx.capturedTexts()[1].toFloat();
-        return true;
-    }
-    else
-    {
-        return false;
-    }
 }
 
 void PlayerWindow::determineDurations(QStringList playlist)
@@ -328,96 +223,249 @@ void PlayerWindow::determineDurations(QStringList playlist)
     }
 }
 
+bool PlayerWindow::findDuration(QString stdout, float& duration)
+{
+    QRegExp rx("ID_LENGTH=([0-9]+)");
+    if (rx.lastIndexIn(stdout) != -1)
+    {
+        duration = rx.capturedTexts()[1].toFloat();
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+void PlayerWindow::initHelp()
+{
+    this->helpLabel = new QLabel(this);
+    this->helpLabel->setText(QString::fromUtf8("Комбинации клавиш"));
+    this->helpLabel->setStyleSheet("QLabel { font: 48px \"Segoe UI\"; margin-top: -30px; padding-top: 30px; }");
+    this->helpLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+    this->sidebarLayout->addWidget(this->helpLabel);
+
+    this->helpTable = new QTableWidget(this);
+    this->helpTable->horizontalHeader()->hide();
+    this->helpTable->verticalHeader()->hide();
+    this->helpTable->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
+    this->helpTable->setShowGrid(false);
+    this->helpTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->helpTable->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    this->helpTable->setColumnCount(2);
+    this->helpTable->setRowCount(5);
+    this->helpTable->setColumnWidth(0, 110);
+    this->helpTable->setColumnWidth(1, 520);
+    this->helpTable->setItem(0, 0, new QTableWidgetItem(QString::fromUtf8("#/j")));
+    this->helpTable->setItem(0, 1, new QTableWidgetItem(QString::fromUtf8("Выбор аудио / субтитров")));
+    this->helpTable->setItem(1, 0, new QTableWidgetItem(QString::fromUtf8("-/+")));
+    this->helpTable->setItem(1, 1, new QTableWidgetItem(QString::fromUtf8("Задержка аудиодорожки")));
+    this->helpTable->setItem(2, 0, new QTableWidgetItem(QString::fromUtf8("z/x")));
+    this->helpTable->setItem(2, 1, new QTableWidgetItem(QString::fromUtf8("Задержка субтитров")));
+    this->helpTable->setItem(3, 0, new QTableWidgetItem(QString::fromUtf8("a/s")));
+    this->helpTable->setItem(3, 1, new QTableWidgetItem(QString::fromUtf8("Больше/меньше серий")));
+    this->helpTable->setItem(4, 0, new QTableWidgetItem(QString::fromUtf8("w/e")));
+    this->initOpeningEnding();
+    this->helpTable->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    this->helpTable->setFixedSize(620, 238);
+    this->sidebarLayout->addWidget(this->helpTable);
+
+    this->hotkeys[Qt::Key_Q] = std::bind(&PlayerWindow::stop, this);
+    this->hotkeys[Qt::Key_W] = std::bind(&PlayerWindow::openingEndsHere, this);
+    this->hotkeys[Qt::Key_E] = std::bind(&PlayerWindow::endingStartsHere, this);
+    this->hotkeys[Qt::Key_O] = std::bind(&PlayerWindow::toggleSidebar, this);
+    this->hotkeys[Qt::Key_P] = std::bind(&PlayerWindow::togglePowerOffOnFinish, this);
+    this->hotkeys[Qt::Key_A] = std::bind(&PlayerWindow::planLess, this);
+    this->hotkeys[Qt::Key_S] = std::bind(&PlayerWindow::planMore, this);
+}
+
+void PlayerWindow::initOpeningEnding()
+{
+    this->openingLength = 0;
+    this->endingLength = 0;
+    if (this->playlistName != "")
+    {
+        if (MediaDb::getInstance().contains(this->playlistName, "openingLength"))
+        {
+            this->openingLength = MediaDb::getInstance().get(this->playlistName, "openingLength").toFloat();
+        }
+        if (MediaDb::getInstance().contains(this->playlistName, "endingLength"))
+        {
+            this->endingLength = MediaDb::getInstance().get(this->playlistName, "endingLength").toFloat();
+        }
+    }
+    this->drawOpeningEndingLength();
+}
+
+void PlayerWindow::drawOpeningEndingLength()
+{
+    this->helpTable->setItem(4, 1, new QTableWidgetItem(QString::fromUtf8("Опенинг (%1 с.) / титры (%2 с.)").arg((int)this->openingLength).arg((int)this->endingLength)));
+}
+
+void PlayerWindow::initPlayer()
+{
+    this->mpvContainer = new QWidget(this);
+    this->mpvContainer->setAttribute(Qt::WA_NativeWindow);
+
+    // FIXME
+    int xOffset = 1;
+    int yOffset = 20;
+    this->mpvContainer->move(-xOffset, -yOffset);
+    this->mpvContainer->setFixedSize(1920 + xOffset, 1080 + yOffset);
+    this->mpvContainer->show();
+
+    this->mpv = NULL;
+    this->resetPlayerProperties();
+}
+
+void PlayerWindow::resetPlayerProperties()
+{
+    this->paused = false;
+    this->progress = 0;
+    this->notifiedProgress = 0;
+    this->duration = 0;
+    this->remaining = 0;
+}
+
+void PlayerWindow::initThemylog()
+{
+    if (getenv("THEMYLOG"))
+    {
+        auto address = QString::fromLatin1(getenv("THEMYLOG"));
+        this->themylogSocket = new QUdpSocket(this);
+        this->themylogAddress = QHostAddress(address.split(':')[0]);
+        this->themylogPort = address.split(':')[1].toUInt();
+    }
+    else
+    {
+        this->themylogSocket = NULL;
+    }
+}
+
+void PlayerWindow::themylog(const QString& logger, const QString& level, const QString& msg, const QString& movie, const QMap<QString, QString>& args)
+{
+    if (this->themylogSocket)
+    {
+        QString data = QString("application=theMediaShell\n"
+                               "logger=%1\n"
+                               "level=%2\n"
+                               "msg=%3\n"
+                               "movie=%4").arg(logger)
+                                          .arg(level)
+                                          .arg(msg)
+                                          .arg(movie);
+        for (auto iter = args.begin(); iter != args.end(); ++iter)
+        {
+            data += "\n" + iter.key() + "=" + iter.value();
+        }
+
+        this->themylogSocket->writeDatagram(data.toUtf8(), this->themylogAddress, this->themylogPort);
+    }
+}
+
+void PlayerWindow::themylog(const QString& msg, const QString& movie, const QMap<QString, QString>& args)
+{
+    this->themylog("movie", "info", msg, movie, args);
+}
+
+QMap<QString, QString> PlayerWindow::withProgresDuration(QMap<QString, QString> args)
+{
+    args["progress"] = QString("%1").arg(this->progress);
+    args["duration"] = QString("%1").arg(this->duration);
+    return args;
+}
+
+QMap<QString, QString> PlayerWindow::withDownloadedAt(QMap<QString, QString> args, QString file)
+{
+    auto fi = QFileInfo(file);
+    args["downloaded_at"] = QString("%1").arg(fi.lastModified().toTime_t());
+    return args;
+}
+
+void PlayerWindow::showSidebar()
+{
+    this->sidebar->show();
+    this->showSidebarTemporarilyTimer.stop();
+}
+
+void PlayerWindow::showSidebarTemporarily()
+{
+    if (!this->sidebar->isVisible())
+    {
+        this->showSidebar();
+        this->showSidebarTemporarilyTimer.start();
+    }
+    else if (this->showSidebarTemporarilyTimer.isActive())
+    {
+        // reload timer if already temporarily shown
+        this->showSidebarTemporarilyTimer.start();
+    }
+}
+
+void PlayerWindow::hideSidebar()
+{
+    this->sidebar->hide();
+    this->showSidebarTemporarilyTimer.stop();
+}
+
+bool PlayerWindow::event(QEvent* event)
+{
+    if (event->type() == QEvent::User)
+    {
+        while (this->mpv)
+        {
+            mpv_event* event = mpv_wait_event(this->mpv, 0);
+            if (event->event_id != MPV_EVENT_NONE)
+            {
+                this->handleMpvEvent(event);
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return true;
+    }
+
+    if (event->type() == QEvent::KeyPress || event->type() == QEvent::ShortcutOverride)
+    {
+        QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
+        int key = keyEvent->key();
+
+        if (this->hotkeys.contains(key))
+        {
+            this->hotkeys[key]();
+            return true;
+        }
+
+        Utils::x11KeyEventForChildren(this->mpvContainer->winId(), 1, keyEvent->nativeVirtualKey(), keyEvent->nativeModifiers());
+        Utils::x11KeyEventForChildren(this->mpvContainer->winId(), 0, keyEvent->nativeVirtualKey(), keyEvent->nativeModifiers());
+    }
+
+    return QWidget::event(event);
+}
+
 void PlayerWindow::play()
 {
     if (this->playlist->getFrontItem() && this->playlist->getFrontItem()->isActive)
     {
         QString file = this->playlist->getFrontItem()->file;
 
-        this->mpv = mpv_create();
+        this->createMpv(file);
 
-        auto mpv_container = new QWidget();
-        mpv_container->setAttribute(Qt::WA_NativeWindow);
-        mpv_container->showFullScreen();
-        int64_t wid = mpv_container->winId();
-        mpv_set_option(this->mpv, "wid", MPV_FORMAT_INT64, &wid);
+        this->tuneMpv(file);
 
-        mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
-        mpv_set_option_string(this->mpv, "input-x11-keyboard", "yes");
+        this->resetPlayerProperties();
 
-        mpv_set_option_string(this->mpv, "vo", "vdpau");
-        mpv_set_option_string(this->mpv, "hwdec", "vdpau");
-
-        // mpv_set_option_string(this->mpv, "fs", "yes");
-
-        mpv_set_option_string(this->mpv, "channels", "2");
-        mpv_set_option_string(this->mpv, "alang", "ja,jp,jpn,en,eng,ru,rus");
-
-        mpv_set_option_string(this->mpv, "autosub-match", "fuzzy");
-        mpv_set_option_string(this->mpv, "slang", "ru,rus,en,eng");
-        mpv_set_option_string(this->mpv, "subcp", "enca:ru");
-
-        mpv_initialize(this->mpv);
-
-        mpv_observe_property(this->mpv, 0, "aid", MPV_FORMAT_STRING);
-        mpv_observe_property(this->mpv, 0, "pause", MPV_FORMAT_FLAG);
-        mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
-
-        auto fileUtf8 = file.toUtf8();
-        const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
-        mpv_command(this->mpv, loadCmd);
-
-        mpv_set_option_string(this->mpv, "idle", "no");
-
-        if (MediaDb::getInstance().contains(file, "progress"))
-        {
-            float progress = MediaDb::getInstance().get(file, "progress").toFloat();
-            float duration = MediaDb::getInstance().get(file, "duration").toFloat();
-            if (!Utils::isWatched(progress, duration))
-            {
-                auto secondsUtf8 = QString::number(progress).toUtf8();
-                const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
-                mpv_command(this->mpv, seekCmd);
-            }
-        }
-        else if (this->openingLength > 0)
-        {
-            auto secondsUtf8 = QString::number(this->openingLength).toUtf8();
-            const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
-            mpv_command(this->mpv, seekCmd);
-        }
-
-        if (this->playlistName != "")
-        {
-            if (MediaDb::getInstance().contains(this->playlistName, "aid"))
-            {
-                mpv_set_property_string(this->mpv, "aid", MediaDb::getInstance().get(this->playlistName, "aid").toString().toUtf8().constData());
-            }
-        }
-
-        this->paused = false;
-        this->progress = 0;
-        this->notifiedProgress = 0;
-        this->duration = 0;
-        this->remaining = 0;
-
-        auto fi = QFileInfo(file);
-        this->themylog(QString("application=theMediaShell\n"
-                               "logger=movie\n"
-                               "level=info\n"
-                               "msg=start\n"
-                               "movie=%1\n"
-                               "downloaded_at=%2").arg(file)
-                                                  .arg(fi.lastModified().toTime_t()));
+        QMap<QString, QString> args;
+        this->themylog("start", file, this->withDownloadedAt(args, file));
     }
     else
     {
         if (this->powerOffOnFinish)
         {
-            QProcess* hook = new QProcess;
-            hook->start(this->getHookPath("power-off"));
-            hook->closeWriteChannel();
-            this->hooks.append(hook);
+            this->runHook("power-off");
         }
 
         emit this->closing(this->powerOffOnFinish);
@@ -425,153 +473,169 @@ void PlayerWindow::play()
     }
 }
 
-QString PlayerWindow::getHookPath(QString hookName)
+void PlayerWindow::createMpv(const QString& file)
 {
-    return QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
+    this->mpv = mpv_create();
+
+    int64_t wid = this->mpvContainer->winId();
+    mpv_set_option(this->mpv, "wid", MPV_FORMAT_INT64, &wid);
+
+    mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
+    mpv_set_option_string(this->mpv, "input-x11-keyboard", "yes");
+
+    mpv_set_option_string(this->mpv, "vo", "vdpau");
+    mpv_set_option_string(this->mpv, "hwdec", "vdpau");
+
+    mpv_set_option_string(this->mpv, "channels", "2");
+    mpv_set_option_string(this->mpv, "alang", "ja,jp,jpn,en,eng,ru,rus");
+
+    mpv_set_option_string(this->mpv, "autosub-match", "fuzzy");
+    mpv_set_option_string(this->mpv, "slang", "ru,rus,en,eng");
+    mpv_set_option_string(this->mpv, "subcp", "enca:ru");
+
+    mpv_observe_property(this->mpv, 0, "aid", MPV_FORMAT_STRING);
+    mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(this->mpv, 0, "pause", MPV_FORMAT_FLAG);
+    mpv_observe_property(this->mpv, 0, "playtime-remaining", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(this->mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
+
+    mpv_set_wakeup_callback(this->mpv, [](void* ctx)
+    {
+        QCoreApplication::postEvent((PlayerWindow*)ctx, new QEvent(QEvent::User));
+    }, this);
+
+    mpv_initialize(this->mpv);
+
+    auto fileUtf8 = file.toUtf8();
+    const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
+    mpv_command(this->mpv, loadCmd);
+
+    mpv_set_option_string(this->mpv, "idle", "no");
 }
 
-void PlayerWindow::themylog(QString string)
+void PlayerWindow::tuneMpv(const QString &file)
 {
-    if (this->themylogSocket)
+    if (MediaDb::getInstance().contains(file, "progress"))
     {
-        this->themylogSocket->writeDatagram(string.toUtf8(), this->themylogAddress, this->themylogPort);
+        float progress = MediaDb::getInstance().get(file, "progress").toFloat();
+        float duration = MediaDb::getInstance().get(file, "duration").toFloat();
+        if (!Utils::isWatched(progress, duration))
+        {
+            auto secondsUtf8 = QString::number(progress).toUtf8();
+            const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
+            mpv_command(this->mpv, seekCmd);
+        }
     }
-}
-
-void PlayerWindow::updateClockLabel()
-{
-    this->clockLabel->setText(QDateTime::currentDateTime().toString("hh:mm"));
-}
-
-void PlayerWindow::updatePowerLabel()
-{
-    this->powerLabel->setVisible(this->powerOffOnFinish);
-}
-
-void PlayerWindow::togglePowerOffOnFinish()
-{
-    this->powerOffOnFinish = !this->powerOffOnFinish;
-    this->updatePowerLabel();
-    this->showTemporarily();
-}
-
-void PlayerWindow::checkEvents()
-{
-    if (this->mpv != NULL)
+    else if (this->openingLength > 0)
     {
-        mpv_event* event = mpv_wait_event(this->mpv, 0);
+        auto secondsUtf8 = QString::number(this->openingLength).toUtf8();
+        const char* seekCmd[] = {"seek", secondsUtf8.constData(), "absolute", NULL};
+        mpv_command(this->mpv, seekCmd);
+    }
 
-        if (event->event_id == MPV_EVENT_SHUTDOWN)
+    if (this->playlistName != "")
+    {
+        if (MediaDb::getInstance().contains(this->playlistName, "aid"))
         {
-            mpv_terminate_destroy(this->mpv);
-            this->mpv = NULL;
-
-            auto finishedPlaylistItem = this->playlist->getFrontItem();
-
-            MediaDb::getInstance().set(finishedPlaylistItem->file, "progress", this->progress);
-
-            auto fi = QFileInfo(finishedPlaylistItem->file);
-            this->themylog(QString("application=theMediaShell\n"
-                                   "logger=movie\n"
-                                   "level=info\n"
-                                   "msg=end\n"
-                                   "movie=%1\n"
-                                   "downloaded_at=%2\n"
-                                   "progress=%3\n"
-                                   "duration=%4").arg(finishedPlaylistItem->file)
-                                                 .arg(fi.lastModified().toTime_t())
-                                                 .arg(this->progress)
-                                                 .arg(this->duration));
-
-            this->playlist->popFrontItem();
-            this->play();
-            return;
-        }
-
-        if (event->event_id == MPV_EVENT_PROPERTY_CHANGE)
-        {
-            mpv_event_property* property_event = (mpv_event_property*)event->data;
-
-            if (property_event->name == QLatin1String("aid"))
-            {
-                if (this->playlistName != "")
-                {
-                    MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
-                }
-            }
-
-            if (property_event->name == QLatin1String("length"))
-            {
-                this->duration = *((double*)property_event->data);
-            }
-
-            if (property_event->name == QLatin1String("pause"))
-            {
-                bool paused = *((int*)property_event->data);
-                if (paused != this->paused)
-                {
-                    this->paused = paused;
-
-                    QString msg;
-                    if (this->paused)
-                    {
-                        msg = "pause";
-                    }
-                    else
-                    {
-                        msg = "resume";
-                    }
-                    this->themylog(QString("application=theMediaShell\n"
-                                               "logger=movie\n"
-                                               "level=info\n"
-                                               "msg=%1\n"
-                                               "movie=%2\n"
-                                               "progress=%3\n"
-                                               "duration=%4").arg(msg)
-                                                             .arg(this->playlist->getFrontItem()->file)
-                                                             .arg(this->progress)
-                                                             .arg(this->duration));
-                }
-            }
-        }
-
-        mpv_get_property(this->mpv, "time-pos", MPV_FORMAT_DOUBLE, &this->progress);
-        mpv_get_property(this->mpv, "playtime-remaining", MPV_FORMAT_DOUBLE, &this->remaining);
-
-        if (this->duration > 0 &&
-            this->progress > 0 &&
-            this->duration - this->progress < this->endingLength)
-        {
-            const char* quitCmd[] = {"quit", NULL};
-            mpv_command(this->mpv, quitCmd);
-        }
-
-        this->playlist->notify(QDateTime::currentDateTime(), this->remaining);
-
-        if (!this->paused)
-        {
-            if ((int)this->progress != (int)this->notifiedProgress)
-            {
-                this->themylog(QString("application=theMediaShell\n"
-                                       "logger=movie\n"
-                                       "level=info\n"
-                                       "msg=progress\n"
-                                       "movie=%1\n"
-                                       "progress=%2\n"
-                                       "remaining=%3\n"
-                                       "duration=%4").arg(this->playlist->getFrontItem()->file)
-                                                     .arg(this->progress)
-                                                     .arg(this->remaining)
-                                                     .arg(this->duration));
-                this->notifiedProgress = this->progress;
-            }
+            mpv_set_property_string(this->mpv, "aid", MediaDb::getInstance().get(this->playlistName, "aid").toString().toUtf8().constData());
         }
     }
 }
 
-void PlayerWindow::drawOpeningEndingLength()
+void PlayerWindow::handleMpvEvent(mpv_event* event)
 {
-    this->helpTable->setItem(4, 1, new QTableWidgetItem(QString::fromUtf8("Опенинг (%1 с.) / титры (%2 с.)").arg((int)this->openingLength).arg((int)this->endingLength)));
+    if (event->event_id == MPV_EVENT_SHUTDOWN)
+    {
+        mpv_terminate_destroy(this->mpv);
+        this->mpv = NULL;
+
+        auto finishedPlaylistItem = this->playlist->getFrontItem();
+
+        MediaDb::getInstance().set(finishedPlaylistItem->file, "progress", this->progress);
+
+        QMap<QString, QString> args;
+        auto file = finishedPlaylistItem->file;
+        this->themylog("end", file, this->withDownloadedAt(this->withProgresDuration(args), file));
+
+        this->playlist->popFrontItem();
+        this->play();
+        return;
+    }
+
+    if (event->event_id == MPV_EVENT_PROPERTY_CHANGE)
+    {
+        mpv_event_property* property_event = (mpv_event_property*)event->data;
+
+        if (property_event->name == QLatin1String("aid"))
+        {
+            if (this->playlistName != "")
+            {
+                MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+            }
+        }
+
+        if (property_event->name == QLatin1String("length"))
+        {
+            this->duration = *((double*)property_event->data);
+        }
+
+        if (property_event->name == QLatin1String("pause"))
+        {
+            bool paused = *((int*)property_event->data);
+            if (paused != this->paused)
+            {
+                this->paused = paused;
+
+                QString msg;
+                if (this->paused)
+                {
+                    msg = "pause";
+                }
+                else
+                {
+                    msg = "resume";
+                }
+
+
+                QMap<QString, QString> args;
+                auto file = this->playlist->getFrontItem()->file;
+                this->themylog(msg, file, this->withDownloadedAt(this->withProgresDuration(args), file));
+            }
+        }
+
+        if (property_event->name == QLatin1String("playtime-remaining"))
+        {
+            this->remaining = *((double*)property_event->data);
+        }
+
+        if (property_event->name == QLatin1String("time-pos"))
+        {
+            this->progress = *((double*)property_event->data);
+        }
+    }
+
+    if (this->duration > 0 &&
+        this->progress > 0 &&
+        this->duration - this->progress < this->endingLength)
+    {
+        const char* quitCmd[] = {"quit", NULL};
+        mpv_command(this->mpv, quitCmd);
+    }
+
+    this->playlist->notify(QDateTime::currentDateTime(), this->remaining);
+
+    if (!this->paused)
+    {
+        if ((int)this->progress != (int)this->notifiedProgress)
+        {
+            QMap<QString, QString> args;
+            auto file = this->playlist->getFrontItem()->file;
+            args["remaining"] = QString("%1").arg(this->remaining);
+            this->themylog("progress", file, this->withProgresDuration(args));
+
+            this->notifiedProgress = this->progress;
+        }
+    }
 }
 
 void PlayerWindow::stop()
@@ -583,28 +647,16 @@ void PlayerWindow::stop()
     mpv_command(this->mpv, quitCmd);
 }
 
-void PlayerWindow::toggle()
-{
-    if (this->isVisible())
-    {
-        this->hide();
-    }
-    else
-    {
-        this->show();
-    }
-}
-
 void PlayerWindow::planLess()
 {
     this->playlist->setActiveCount(std::max(this->playlist->activeCount() - 1, 1));
-    this->showTemporarily();
+    this->showSidebarTemporarily();
 }
 
 void PlayerWindow::planMore()
 {
     this->playlist->setActiveCount(std::min(this->playlist->activeCount() + 1, this->playlist->rowCount()));
-    this->showTemporarily();
+    this->showSidebarTemporarily();
 }
 
 void PlayerWindow::openingEndsHere()
@@ -614,7 +666,7 @@ void PlayerWindow::openingEndsHere()
         this->openingLength = this->progress;
         MediaDb::getInstance().set(this->playlistName, "openingLength", this->openingLength);
         this->drawOpeningEndingLength();
-        this->showTemporarily();
+        this->showSidebarTemporarily();
     }
 }
 
@@ -625,6 +677,15 @@ void PlayerWindow::endingStartsHere()
         this->endingLength = this->duration - this->progress;
         MediaDb::getInstance().set(this->playlistName, "endingLength", this->endingLength);
         this->drawOpeningEndingLength();
-        this->showTemporarily();
+        this->showSidebarTemporarily();
     }
+}
+
+void PlayerWindow::runHook(const QString& hookName)
+{
+    auto hookPath = QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
+
+    QProcess hook;
+    hook.start(hookPath);
+    hook.waitForFinished();
 }

@@ -2,8 +2,8 @@
     <qresource prefix="/">
         <file>MainWindow.qss</file>
         <file>pixel.png</file>
-        <file>Player/PlayerWindow.qss</file>
         <file>QMessageBox.qss</file>
         <file>power.png</file>
+        <file>Player/PlayerWindowSidebar.qss</file>
     </qresource>
 </RCC>

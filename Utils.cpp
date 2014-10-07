@@ -1,8 +1,11 @@
 #include "Utils.h"
 
+#include "X11/Xlib.h"
+
 #include <QGridLayout>
 #include <QSpacerItem>
 #include <QStringList>
+#include <QX11Info>
 
 namespace Utils
 {
@@ -88,5 +91,35 @@ namespace Utils
         QSpacerItem* horizontalSpacer = new QSpacerItem(width, 0, QSizePolicy::Minimum, QSizePolicy::Expanding);
         QGridLayout* layout = (QGridLayout*)box->layout();
         layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    }
+
+    void x11KeyEventForChildren(WId win, bool press, quint32 keysum, quint32 modifiers)
+    {
+        auto dpy = QX11Info::display();
+
+        Window root;
+        Window parent;
+        Window* children;
+        unsigned int nchildren;
+        XQueryTree(dpy, win, &root, &parent, &children, &nchildren);
+
+        for (unsigned int i = 0; i < nchildren; i++)
+        {
+            XKeyEvent event;
+            event.display     = dpy;
+            event.window      = children[i];
+            event.root        = root;
+            event.subwindow   = None;
+            event.time        = CurrentTime;
+            event.x           = 0;
+            event.y           = 0;
+            event.x_root      = 0;
+            event.y_root      = 0;
+            event.same_screen = True;
+            event.type        = press ? KeyPress : KeyRelease;
+            event.keycode     = XKeysymToKeycode(dpy, keysum);
+            event.state       = modifiers;
+            XSendEvent(event.display, event.window, True, KeyPressMask, (XEvent*)&event);
+        }
     }
 }
