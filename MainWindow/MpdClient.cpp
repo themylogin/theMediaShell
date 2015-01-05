@@ -87,6 +87,7 @@ void MpdClient::run()
         finish:
         this->setPlaying(false);
         mpd_connection_free(conn);
+        usleep(100000);
     }
 }
 
