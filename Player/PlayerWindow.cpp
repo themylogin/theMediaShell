@@ -21,9 +21,8 @@
 #include <QRegExp>
 #include <QStringList>
 #include <QWidget>
-#include <QX11Info>
 
-#include <QtConcurrentRun>
+#include <QtConcurrent/QtConcurrentRun>
 
 #include "Player/PlaylistItem.h"
 #include "MediaDb.h"
@@ -49,6 +48,15 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
     this->initThemylog();
 
     this->play();
+}
+
+PlayerWindow::~PlayerWindow()
+{
+    if (this->mpv)
+    {
+        mpv_set_option_string(this->mpv, "vid", "no");
+        mpv_terminate_destroy(this->mpv);
+    }
 }
 
 void PlayerWindow::initSidebar(const QString& playlistTitle, const QStringList& playlist)
@@ -305,6 +313,7 @@ void PlayerWindow::drawOpeningEndingLength()
 void PlayerWindow::initPlayer()
 {
     this->mpvContainer = new QWidget(this);
+    this->mpvContainer->setAttribute(Qt::WA_DontCreateNativeAncestors);
     this->mpvContainer->setAttribute(Qt::WA_NativeWindow);
 
     // FIXME
@@ -683,7 +692,7 @@ void PlayerWindow::endingStartsHere()
 
 void PlayerWindow::runHook(const QString& hookName)
 {
-    auto hookPath = QFileInfo(qApp->argv()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
+    auto hookPath = QFileInfo(qApp->arguments()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
 
     QProcess hook;
     hook.start(hookPath);
