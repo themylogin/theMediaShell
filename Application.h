@@ -7,6 +7,7 @@
 
 #include <X11/Xdefs.h>
 typedef XID Window;
+typedef union _XEvent XEvent;
 
 class Application : public QApplication
 {

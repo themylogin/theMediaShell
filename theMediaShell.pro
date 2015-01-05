@@ -4,14 +4,13 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT       += core gui network widgets x11extras
 
 TARGET = theMediaShell
 TEMPLATE = app
 
-LIBS += -lX11 -lmpv -lmpdclient
+CONFIG += link_pkgconfig debug
+PKGCONFIG += x11 mpv libmpdclient
 
 SOURCES += MediaModel/MediaModel.cpp \
     Application.cpp \

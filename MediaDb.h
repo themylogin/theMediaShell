@@ -54,7 +54,7 @@ public:
 private:
     MediaDb()
     {
-        QString appData = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+        QString appData = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
         QDir dir(appData);
         if (!dir.exists())
         {
