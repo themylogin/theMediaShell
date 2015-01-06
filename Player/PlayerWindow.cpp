@@ -492,15 +492,12 @@ void PlayerWindow::createMpv(const QString& file)
     mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
     mpv_set_option_string(this->mpv, "input-x11-keyboard", "yes");
 
-    mpv_set_option_string(this->mpv, "vo", "vdpau");
-    mpv_set_option_string(this->mpv, "hwdec", "vdpau");
-
-    mpv_set_option_string(this->mpv, "channels", "2");
-    mpv_set_option_string(this->mpv, "alang", "ja,jp,jpn,en,eng,ru,rus");
-
-    mpv_set_option_string(this->mpv, "autosub-match", "fuzzy");
-    mpv_set_option_string(this->mpv, "slang", "ru,rus,en,eng");
-    mpv_set_option_string(this->mpv, "subcp", "enca:ru");
+    QString configPath = QStandardPaths::locate(QStandardPaths::HomeLocation, ".mpv/config");
+    if (!configPath.isEmpty())
+    {
+        auto configPathUtf8 = configPath.toUtf8();
+        mpv_load_config_file(this->mpv, configPathUtf8.constData());
+    }
 
     mpv_observe_property(this->mpv, 0, "aid", MPV_FORMAT_STRING);
     mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
