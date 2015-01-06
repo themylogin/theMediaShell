@@ -122,4 +122,42 @@ namespace Utils
             XSendEvent(event.display, event.window, True, KeyPressMask, (XEvent*)&event);
         }
     }
+
+    bool getFrameExtents(WId win, int& left, int& right, int& top, int& bottom)
+    {
+        static Atom net_frame = 0;
+        if (!net_frame)
+        {
+            net_frame = XInternAtom(QX11Info::display(), "_NET_FRAME_EXTENTS", False);
+        }
+
+        Atom type = 0;
+        int format = 0;
+        ulong count;
+        uchar* data = 0;
+        ulong after;
+        if (XGetWindowProperty(QX11Info::display(), win, net_frame, 0, 4, False, AnyPropertyType, &type, &format, &count, &after, &data) == Success)
+        {
+            // _NET_FRAME_EXTENTS, left, right, top, bottom, CARDINAL[4]/32
+            if (data)
+            {
+                #if __x86_64__
+                int64_t* extents = reinterpret_cast<int64_t*>(data);
+                #else
+                int32_t* extents = reinterpret_cast<int32_t*>(data);
+                #endif
+
+                left = extents[0];
+                right = extents[1];
+                top = extents[2];
+                bottom = extents[3];
+
+                XFree(data);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

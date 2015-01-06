@@ -40,6 +40,13 @@ protected:
 private:
     QString playlistName;
 
+    int frameLeft;
+    int frameRight;
+    int frameTop;
+    int frameBottom;
+
+    QTimer* forceFocusTimer;
+
     // Sidebar
     QWidget* sidebar;
     QVBoxLayout* sidebarLayout;
@@ -108,6 +115,8 @@ private:
 
 
 private slots:
+    void forceFocus();
+
     // Sidebar
     void updateClockLabel();
     void updatePowerLabel();

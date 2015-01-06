@@ -33,9 +33,24 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
 {    
     this->playlistName = playlistName;
 
+    QDialog gaugeDialog;
+    gaugeDialog.show();
+
     this->setAttribute(Qt::WA_DeleteOnClose);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     this->showFullScreen();
+
+    QCoreApplication::processEvents();
+    this->frameLeft = 0;
+    this->frameRight = 0;
+    this->frameTop = 0;
+    this->frameBottom = 0;
+    Utils::getFrameExtents(gaugeDialog.winId(), this->frameLeft, this->frameRight, this->frameTop, this->frameBottom);
+    gaugeDialog.hide();
+
+    this->forceFocusTimer = new QTimer(this);
+    connect(this->forceFocusTimer, SIGNAL(timeout()), this, SLOT(forceFocus()));
+    this->forceFocusTimer->start(100);
 
     this->initPlayer();
 
@@ -99,6 +114,10 @@ void PlayerWindow::initClock()
     this->updatePowerLabel();
     this->clockLayout->addStretch();
     this->sidebarLayout->addLayout(this->clockLayout);
+}
+
+void PlayerWindow::forceFocus()
+{
 }
 
 void PlayerWindow::updateClockLabel()
@@ -313,14 +332,14 @@ void PlayerWindow::drawOpeningEndingLength()
 void PlayerWindow::initPlayer()
 {
     this->mpvContainer = new QWidget(this);
-    this->mpvContainer->setAttribute(Qt::WA_DontCreateNativeAncestors);
-    this->mpvContainer->setAttribute(Qt::WA_NativeWindow);
 
-    // FIXME
-    int xOffset = 1;
-    int yOffset = 20;
-    this->mpvContainer->move(-xOffset, -yOffset);
-    this->mpvContainer->setFixedSize(1920 + xOffset, 1080 + yOffset);
+    auto pal = this->mpvContainer->palette();
+    pal.setColor(QPalette::Background, Qt::black);
+    this->mpvContainer->setAutoFillBackground(true);
+    this->mpvContainer->setPalette(pal);
+
+    this->mpvContainer->move(-this->frameLeft, -this->frameTop);
+    this->mpvContainer->setMinimumSize(1920 + this->frameLeft, 1080 + this->frameTop);
     this->mpvContainer->show();
 
     this->mpv = NULL;
