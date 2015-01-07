@@ -87,6 +87,7 @@ private:
     double remaining;
     void resetPlayerProperties();
 
+    QString file;
     void play();
     void createMpv(const QString& file);
     void tuneMpv(const QString& file);

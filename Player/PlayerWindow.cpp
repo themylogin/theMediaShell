@@ -467,16 +467,14 @@ void PlayerWindow::play()
 {
     if (this->playlist->getFrontItem() && this->playlist->getFrontItem()->isActive)
     {
-        QString file = this->playlist->getFrontItem()->file;
+        this->file = this->playlist->getFrontItem()->file;
 
-        this->createMpv(file);
-
-        this->tuneMpv(file);
+        this->createMpv(this->file);
 
         this->resetPlayerProperties();
 
         QMap<QString, QString> args;
-        this->themylog("start", file, this->withDownloadedAt(args, file));
+        this->themylog("start", this->file, this->withDownloadedAt(args, this->file));
     }
     else
     {
@@ -582,6 +580,12 @@ void PlayerWindow::handleMpvEvent(mpv_event* event)
     {
         struct mpv_event_log_message* msg = (struct mpv_event_log_message*)event->data;
         std::cerr << msg->level << ": " << msg->text;
+        return;
+    }
+
+    if (event->event_id == MPV_EVENT_FILE_LOADED)
+    {
+        this->tuneMpv(this->file);
         return;
     }
 
