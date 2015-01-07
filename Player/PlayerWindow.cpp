@@ -216,33 +216,13 @@ void PlayerWindow::determineDurations(QStringList playlist)
         }
         else
         {
-            QProcess mpv;
-            mpv.start("mpv", QStringList() << "-frames" << "0"
-                                           << "-identify" << file);
-            setpriority(PRIO_PROCESS, mpv.pid(), 19);
-            mpv.waitForFinished(-1);
-
-            QString stdout = QString::fromUtf8(mpv.readAllStandardOutput());
-            if (this->findDuration(stdout, duration))
+            duration = Utils::determineDuration(file);
+            if (duration > 0)
             {
                 MediaDb::getInstance().set(file, "duration", duration);
             }
         }
         this->playlist->setDurationFor(file, duration);
-    }
-}
-
-bool PlayerWindow::findDuration(QString stdout, float& duration)
-{
-    QRegExp rx("ID_LENGTH=([0-9]+)");
-    if (rx.lastIndexIn(stdout) != -1)
-    {
-        duration = rx.capturedTexts()[1].toFloat();
-        return true;
-    }
-    else
-    {
-        return false;
     }
 }
 

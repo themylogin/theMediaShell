@@ -2,9 +2,16 @@
 
 #include "X11/Xlib.h"
 
+extern "C"
+{
+    #include <libavcodec/avcodec.h>
+    #include <libavformat/avformat.h>
+}
+
 #include <QGridLayout>
 #include <QSpacerItem>
 #include <QStringList>
+#include <iostream>
 #include <QX11Info>
 
 namespace Utils
@@ -56,24 +63,6 @@ namespace Utils
         return list;
     }
 
-    QProcess* runMplayer(const QString& file, const QStringList& userArguments)
-    {
-        QStringList arguments;
-
-        auto subPaths = listSubdirectories(QFileInfo(file).dir()).join(",");
-        if (subPaths != "")
-        {
-            arguments.append("-sub-paths");
-            arguments.append(subPaths);
-        }
-
-        QProcess* mplayer = new QProcess;
-        mplayer->start("mplayer", QStringList() << arguments
-                                                << userArguments
-                                                << file);
-        return mplayer;
-    }
-
     bool setStyleSheetFromFile(QWidget* widget, QString fileName)
     {
         QFile qss(fileName);
@@ -121,5 +110,61 @@ namespace Utils
             event.state       = modifiers;
             XSendEvent(event.display, event.window, True, KeyPressMask, (XEvent*)&event);
         }
+    }
+
+    double determineDuration(const QString& path)
+    {
+        int ret;
+        AVFormatContext *formatCtx = NULL;
+        AVCodecContext *codecCtx = NULL;
+        int videoStream = -1;
+        AVRational avr;
+        double duration = 0;
+
+        av_register_all();
+
+        auto pathUtf8 = path.toUtf8();
+        ret = avformat_open_input(&formatCtx, pathUtf8.constData(), NULL, NULL);
+        if (ret != 0)
+        {
+            goto cleanup;
+        }
+
+        // Retrieve stream information
+        ret = avformat_find_stream_info(formatCtx, NULL);
+        if (ret < 0)
+        {
+            goto cleanup;
+        }
+
+        for (unsigned int i = 0; i < formatCtx->nb_streams; i++)
+        {
+            if (formatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+            {
+                videoStream = i;
+                break;
+            }
+        }
+        if (videoStream < 0)
+        {
+            goto cleanup;
+        }
+
+        codecCtx = formatCtx->streams[videoStream]->codec;
+        if (codecCtx == NULL)
+        {
+            goto cleanup;
+        }
+        
+        avr = codecCtx->time_base;
+        duration = formatCtx->streams[videoStream]->duration * avr.num / static_cast<double>(avr.den) * 1000.0;
+
+        cleanup:
+        if (formatCtx != NULL)
+        {
+            avformat_close_input(&formatCtx);
+        }
+
+        return duration;
     }
 }

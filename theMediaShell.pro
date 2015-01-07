@@ -10,7 +10,7 @@ TARGET = theMediaShell
 TEMPLATE = app
 
 CONFIG += link_pkgconfig debug
-PKGCONFIG += x11 mpv libmpdclient
+PKGCONFIG += libavformat libavcodec libavutil x11 mpv libmpdclient
 
 SOURCES += MediaModel/MediaModel.cpp \
     Application.cpp \

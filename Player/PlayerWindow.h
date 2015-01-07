@@ -62,7 +62,6 @@ private:
     void initPlaylist(const QStringList& playlist);
 
     void determineDurations(QStringList playlist);
-    bool findDuration(QString stdout, float& duration);
 
     QLabel* helpLabel;
     QTableWidget* helpTable;

@@ -16,12 +16,13 @@ namespace Utils
 
     QString formatDuration(int duration);
     QStringList listSubdirectories(QDir directory);
-    QProcess* runMplayer(const QString& file, const QStringList& userArguments = QStringList());
 
     bool setStyleSheetFromFile(QWidget* widget, QString fileName);
     void resizeMessageBox(QMessageBox* box, int width = 1280);
 
     void x11KeyEventForChildren(WId win, bool press, quint32 keysum, quint32 modifiers);
+
+    double determineDuration(const QString& path);
 }
 
 #endif // UTILS_H
