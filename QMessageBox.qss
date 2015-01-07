@@ -1,6 +1,7 @@
 QMessageBox, QMessageBox *
 {
-    background-color: rgb(37, 29, 35);
+    background-color: rgb(37, 29, 35);    
+    color: rgb(80, 80, 80);
 }
 
 QPushButton

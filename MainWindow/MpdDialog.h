@@ -3,6 +3,7 @@
 
 #include <QMessageBox>
 #include <QPushButton>
+#include <QString>
 
 #include "MpdClient.h"
 
@@ -21,6 +22,7 @@ private slots:
     void mpdStateChanged(MpdState state);
 
 private:
+    QString movie;
     MpdClient* mpd;
     MpdState mpdState;
     bool wasPlaying;

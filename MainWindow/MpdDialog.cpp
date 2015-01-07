@@ -1,10 +1,13 @@
 #include "MpdDialog.h"
 
+#include "Utils.h"
+
 MpdDialog::MpdDialog(QString movie, MpdClient* mpd, QWidget* parent) :
     QMessageBox(parent)
 {
     this->setIcon(QMessageBox::Information);
-    this->setText(QString::fromUtf8("Wanted to watch %1?").arg(movie));
+
+    this->movie = movie;
 
     this->mpd = mpd;
     connect(this->mpd, SIGNAL(stateChanged(MpdState)), this, SLOT(mpdStateChanged(MpdState)));
@@ -42,10 +45,12 @@ void MpdDialog::mpdStateChanged(MpdState state)
 {
     if (state.playing)
     {
-        this->setInformativeText(QString::fromUtf8("But %1 — %2 is playing! Remaining time: %3:%4").arg(state.artist)
-                                                                                                   .arg(state.title)
-                                                                                                   .arg(QString::number(state.remaining / 60), 2, QChar('0'))
-                                                                                                   .arg(QString::number(state.remaining % 60), 2, QChar('0')));
+        this->setText(QString::fromUtf8("Wanted to watch %1?\nBut %2 — %3 is playing!\nRemaining time: %4:%5")
+            .arg(this->movie)
+            .arg(state.artist)
+            .arg(state.title)
+            .arg(QString::number(state.remaining / 60), 2, QChar('0'))
+            .arg(QString::number(state.remaining % 60), 2, QChar('0')));
         if (this->mpdState.remaining < state.remaining ||
             this->mpdState.artist != state.artist ||
             this->mpdState.title != state.title)
