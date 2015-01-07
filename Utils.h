@@ -22,8 +22,6 @@ namespace Utils
     void resizeMessageBox(QMessageBox* box, int width = 1280);
 
     void x11KeyEventForChildren(WId win, bool press, quint32 keysum, quint32 modifiers);
-
-    bool getFrameExtents(WId win, int& left, int& right, int& top, int& bottom);
 }
 
 #endif // UTILS_H

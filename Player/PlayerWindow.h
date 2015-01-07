@@ -40,13 +40,6 @@ protected:
 private:
     QString playlistName;
 
-    int frameLeft;
-    int frameRight;
-    int frameTop;
-    int frameBottom;
-
-    QTimer* forceFocusTimer;
-
     // Sidebar
     QWidget* sidebar;
     QVBoxLayout* sidebarLayout;
@@ -83,6 +76,8 @@ private:
 
     // Player
     QWidget* mpvContainer;
+    QWidget* mpvContainerPseudoFocusDistracter;
+    QTimer* mpvContainerPseudoFocusDistracterTimer;
     mpv_handle* mpv;
     void initPlayer();
 
@@ -115,8 +110,6 @@ private:
 
 
 private slots:
-    void forceFocus();
-
     // Sidebar
     void updateClockLabel();
     void updatePowerLabel();
@@ -124,6 +117,8 @@ private slots:
     void toggleSidebar();
 
     // Player
+    void distractFocusFromMpvContainer();
+
     void stop();
 
     void planLess();

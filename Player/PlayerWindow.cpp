@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <ctime>
+#include <iostream>
 
 #include <qapplication.h>
 
@@ -33,24 +34,9 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
 {    
     this->playlistName = playlistName;
 
-    QDialog gaugeDialog;
-    gaugeDialog.show();
-
     this->setAttribute(Qt::WA_DeleteOnClose);
-    this->setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    this->setWindowFlags(Qt::FramelessWindowHint);
     this->showFullScreen();
-
-    QCoreApplication::processEvents();
-    this->frameLeft = 0;
-    this->frameRight = 0;
-    this->frameTop = 0;
-    this->frameBottom = 0;
-    Utils::getFrameExtents(gaugeDialog.winId(), this->frameLeft, this->frameRight, this->frameTop, this->frameBottom);
-    gaugeDialog.hide();
-
-    this->forceFocusTimer = new QTimer(this);
-    connect(this->forceFocusTimer, SIGNAL(timeout()), this, SLOT(forceFocus()));
-    this->forceFocusTimer->start(100);
 
     this->initPlayer();
 
@@ -114,10 +100,6 @@ void PlayerWindow::initClock()
     this->updatePowerLabel();
     this->clockLayout->addStretch();
     this->sidebarLayout->addLayout(this->clockLayout);
-}
-
-void PlayerWindow::forceFocus()
-{
 }
 
 void PlayerWindow::updateClockLabel()
@@ -331,16 +313,43 @@ void PlayerWindow::drawOpeningEndingLength()
 
 void PlayerWindow::initPlayer()
 {
-    this->mpvContainer = new QWidget(this);
+    QPalette pal;
 
-    auto pal = this->mpvContainer->palette();
+    this->mpvContainer = new QWidget(this);
+    pal = this->mpvContainer->palette();
     pal.setColor(QPalette::Background, Qt::black);
     this->mpvContainer->setAutoFillBackground(true);
     this->mpvContainer->setPalette(pal);
-
-    this->mpvContainer->move(-this->frameLeft, -this->frameTop);
-    this->mpvContainer->setMinimumSize(1920 + this->frameLeft, 1080 + this->frameTop);
+    this->mpvContainer->setFixedSize(1920, 1080);
     this->mpvContainer->show();
+
+    /* From MPV documentation:
+     * On X11, a sub-window with input enabled grabs all keyboard input as long as it is:
+     * 1. a child of a focused window, and
+     * 2. the mouse is inside of the sub-window.
+     * This can steal away all keyboard input from the application embedding the mpv window,
+     * and on the other hand, the mpv window will receive no input if the mouse is outside of
+     * the mpv window, even though mpv has focus. Modern toolkits work around this weird X11
+     * behavior, but naively embedding foreign windows breaks it.
+     * The only way to handle this reasonably is using the XEmbed protocol, which was designed
+     * to solve these problems. But Qt has questionable support, and mpv doesn't implement it yet.
+     *
+     * We work around this bug by putting a black pixel window to the top left corner
+     * of the screen and periodically moving mouse up there.
+     */
+    this->mpvContainerPseudoFocusDistracter = new QWidget(this);
+    pal = this->mpvContainerPseudoFocusDistracter->palette();
+    pal.setColor(QPalette::Background, Qt::black);
+    this->mpvContainerPseudoFocusDistracter->setAutoFillBackground(true);
+    this->mpvContainerPseudoFocusDistracter->setPalette(pal);
+    this->mpvContainerPseudoFocusDistracter->setCursor(Qt::BlankCursor);
+    this->mpvContainerPseudoFocusDistracter->setFixedSize(1, 1);
+    this->mpvContainerPseudoFocusDistracter->move(0, 0);
+    this->mpvContainerPseudoFocusDistracter->show();
+
+    this->mpvContainerPseudoFocusDistracterTimer = new QTimer(this);
+    connect(this->mpvContainerPseudoFocusDistracterTimer, SIGNAL(timeout()), this, SLOT(distractFocusFromMpvContainer()));
+    this->mpvContainerPseudoFocusDistracterTimer->start(100);
 
     this->mpv = NULL;
     this->resetPlayerProperties();
@@ -509,7 +518,7 @@ void PlayerWindow::createMpv(const QString& file)
     mpv_set_option(this->mpv, "wid", MPV_FORMAT_INT64, &wid);
 
     mpv_set_option_string(this->mpv, "input-default-bindings", "yes");
-    mpv_set_option_string(this->mpv, "input-x11-keyboard", "yes");
+    mpv_set_option_string(this->mpv, "input-vo-keyboard", "yes");
 
     QString configPath = QStandardPaths::locate(QStandardPaths::HomeLocation, ".mpv/config");
     if (!configPath.isEmpty())
@@ -523,6 +532,8 @@ void PlayerWindow::createMpv(const QString& file)
     mpv_observe_property(this->mpv, 0, "pause", MPV_FORMAT_FLAG);
     mpv_observe_property(this->mpv, 0, "playtime-remaining", MPV_FORMAT_DOUBLE);
     mpv_observe_property(this->mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
+
+    mpv_request_log_messages(this->mpv, "info");
 
     mpv_set_wakeup_callback(this->mpv, [](void* ctx)
     {
@@ -584,6 +595,13 @@ void PlayerWindow::handleMpvEvent(mpv_event* event)
 
         this->playlist->popFrontItem();
         this->play();
+        return;
+    }
+
+    if (event->event_id == MPV_EVENT_LOG_MESSAGE)
+    {
+        struct mpv_event_log_message* msg = (struct mpv_event_log_message*)event->data;
+        std::cerr << msg->level << ": " << msg->text;
         return;
     }
 
@@ -660,6 +678,14 @@ void PlayerWindow::handleMpvEvent(mpv_event* event)
 
             this->notifiedProgress = this->progress;
         }
+    }
+}
+
+void PlayerWindow::distractFocusFromMpvContainer()
+{
+    if (this->isActiveWindow())
+    {
+        QCursor::setPos(0, 0);
     }
 }
 
