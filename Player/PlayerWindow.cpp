@@ -194,6 +194,7 @@ void PlayerWindow::initPlaylist(const QStringList& playlist)
     this->playlistView->verticalHeader()->hide();
     this->playlistView->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
     this->playlistView->setShowGrid(false);
+    this->playlistView->setFocusPolicy(Qt::NoFocus);
     this->playlistView->setColumnWidth(0, 510);
     this->playlistView->setColumnWidth(1, 110);
     this->playlistView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -239,6 +240,7 @@ void PlayerWindow::initHelp()
     this->helpTable->verticalHeader()->hide();
     this->helpTable->verticalHeader()->setDefaultSectionSize(49); // TODO: Find a way to put this into stylesheet
     this->helpTable->setShowGrid(false);
+    this->helpTable->setFocusPolicy(Qt::NoFocus);
     this->helpTable->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->helpTable->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     this->helpTable->setColumnCount(2);
