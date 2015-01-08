@@ -116,9 +116,6 @@ namespace Utils
     {
         int ret;
         AVFormatContext *formatCtx = NULL;
-        AVCodecContext *codecCtx = NULL;
-        int videoStream = -1;
-        AVRational avr;
         double duration = 0;
 
         av_register_all();
@@ -137,27 +134,7 @@ namespace Utils
             goto cleanup;
         }
 
-        for (unsigned int i = 0; i < formatCtx->nb_streams; i++)
-        {
-            if (formatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
-            {
-                videoStream = i;
-                break;
-            }
-        }
-        if (videoStream < 0)
-        {
-            goto cleanup;
-        }
-
-        codecCtx = formatCtx->streams[videoStream]->codec;
-        if (codecCtx == NULL)
-        {
-            goto cleanup;
-        }
-        
-        avr = codecCtx->time_base;
-        duration = formatCtx->streams[videoStream]->duration * avr.num / static_cast<double>(avr.den) * 1000.0;
+        duration = static_cast<double>(formatCtx->duration) / AV_TIME_BASE;
 
         cleanup:
         if (formatCtx != NULL)
