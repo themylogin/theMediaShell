@@ -19,7 +19,7 @@
 #include <QHeaderView>
 #include <QPair>
 #include <QProcess>
-#include <QRegExp>
+#include <QSettings>
 #include <QStringList>
 #include <QWidget>
 
@@ -33,6 +33,11 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
     : QMainWindow(parent)
 {    
     this->playlistName = playlistName;
+
+    QPalette pal = this->palette();
+    pal.setColor(QPalette::Background, Qt::black);
+    this->setAutoFillBackground(true);
+    this->setPalette(pal);
 
     this->setAttribute(Qt::WA_DeleteOnClose);
     this->setWindowFlags(Qt::FramelessWindowHint);
@@ -264,6 +269,7 @@ void PlayerWindow::initHelp()
     this->hotkeys[Qt::Key_Q] = std::bind(&PlayerWindow::stop, this);
     this->hotkeys[Qt::Key_W] = std::bind(&PlayerWindow::openingEndsHere, this);
     this->hotkeys[Qt::Key_E] = std::bind(&PlayerWindow::endingStartsHere, this);
+    this->hotkeys[Qt::Key_Y] = std::bind(&PlayerWindow::toggleUpscale, this);
     this->hotkeys[Qt::Key_O] = std::bind(&PlayerWindow::toggleSidebar, this);
     this->hotkeys[Qt::Key_P] = std::bind(&PlayerWindow::togglePowerOffOnFinish, this);
     this->hotkeys[Qt::Key_A] = std::bind(&PlayerWindow::planLess, this);
@@ -335,6 +341,99 @@ void PlayerWindow::initPlayer()
 
     this->mpv = NULL;
     this->resetPlayerProperties();
+
+    QSettings settings;
+    this->upscale = settings.value("upscale", true).toBool();
+}
+
+void PlayerWindow::resizeMpvContainer()
+{
+    if (this->width > 0 && this->height > 0)
+    {
+        QSettings settings;
+        QPoint screenCenter = settings.value("screenCenter", QPoint(1920 / 2, 1080 / 2)).toPoint();
+
+        int64_t width = this->width;
+        int64_t height = this->height;
+
+        if (this->upscale)
+        {
+            if ((double)width / height < 1920.0 / 1080)
+            {
+                width *= 1080.0 / height;
+                height = 1080;
+            }
+            else
+            {
+                height *= 1920.0 / width;
+                width = 1920;
+            }
+        }
+        else
+        {
+            QSize minimumImageSize = settings.value("minimumImageSize", QSize(0, 0)).toSize();
+            
+            if (minimumImageSize.width() > 0 && width < minimumImageSize.width())
+            {
+                height *= (double)minimumImageSize.width() / width;
+                width = minimumImageSize.width();
+            }
+            if (minimumImageSize.height() > 0 && height < minimumImageSize.height())
+            {
+                width *= (double)minimumImageSize.height() / height;
+                height = minimumImageSize.height();
+            }
+
+            if (width > 1920)
+            {
+                height /= (double)width / 1920;
+                width = 1920;
+            }
+            if (height > 1080)
+            {
+                width /= (double)height / 1080;
+                height = 1080;
+            }
+        }
+        
+        QPoint topLeft = screenCenter - QPoint(width / 2, height / 2);
+        
+        if (topLeft.x() < 0)
+        {
+            topLeft.setX(0);
+        }
+        else if (topLeft.x() + width > 1920)
+        {
+            topLeft.setX(1920 - width);
+        }
+
+        if (topLeft.y() < 0)
+        {
+            topLeft.setY(0);
+        }
+        else if (topLeft.y() + height > 1080)
+        {
+            topLeft.setY(1080 - height);
+        }
+
+        this->mpvContainer->setFixedSize(width, height);
+        this->mpvContainer->move(topLeft);
+    }
+    else
+    {
+        this->mpvContainer->setFixedSize(1920, 1080);
+        this->mpvContainer->move(0, 0);
+    }
+}
+
+void PlayerWindow::toggleUpscale()
+{
+    this->upscale = !this->upscale;
+
+    QSettings settings;
+    settings.setValue("upscale", this->upscale);
+
+    this->resizeMpvContainer();
 }
 
 void PlayerWindow::resetPlayerProperties()
@@ -344,6 +443,8 @@ void PlayerWindow::resetPlayerProperties()
     this->notifiedProgress = 0;
     this->duration = 0;
     this->remaining = 0;
+    this->width = 0;
+    this->height = 0;
 }
 
 void PlayerWindow::initThemylog()
@@ -447,7 +548,7 @@ bool PlayerWindow::event(QEvent* event)
         return true;
     }
 
-    if (event->type() == QEvent::KeyPress || event->type() == QEvent::ShortcutOverride)
+    if (event->type() == QEvent::KeyPress)
     {
         QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
         int key = keyEvent->key();
@@ -589,6 +690,19 @@ void PlayerWindow::handleMpvEvent(mpv_event* event)
     {
         this->tuneMpv(this->file);
         return;
+    }
+
+    if (event->event_id == MPV_EVENT_VIDEO_RECONFIG)
+    {
+        int64_t width, height;
+        if (mpv_get_property(mpv, "dwidth", MPV_FORMAT_INT64, &width) >= 0 &&
+            mpv_get_property(mpv, "dheight", MPV_FORMAT_INT64, &height) >= 0 &&
+            width > 0 && height > 0)
+        {
+            this->width = width;
+            this->height = height;
+            this->resizeMpvContainer();
+        }
     }
 
     if (event->event_id == MPV_EVENT_PROPERTY_CHANGE)

@@ -78,13 +78,18 @@ private:
     QWidget* mpvContainerPseudoFocusDistracter;
     QTimer* mpvContainerPseudoFocusDistracterTimer;
     mpv_handle* mpv;
+    bool upscale;
     void initPlayer();
+    void resizeMpvContainer();
+    void toggleUpscale();
 
     bool paused;
     double progress;
     double notifiedProgress;
     double duration;
     double remaining;
+    int64_t width;
+    int64_t height;
     void resetPlayerProperties();
 
     QString file;
