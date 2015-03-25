@@ -1,2 +1,2 @@
 #!/bin/sh
-echo 00 | nc 127.0.0.1 8404 
+curl http://127.0.0.1:46408/control -d '{"command":"call_method","args":{"object":"projector_smooth","method":"toggle_on","args":{}}}'
