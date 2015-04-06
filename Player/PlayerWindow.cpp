@@ -11,6 +11,7 @@
 #include <qapplication.h>
 
 #include <QCloseEvent>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -21,6 +22,7 @@
 #include <QProcess>
 #include <QSettings>
 #include <QStringList>
+#include <QTimer>
 #include <QWidget>
 
 #include <QtConcurrent/QtConcurrentRun>
@@ -274,6 +276,8 @@ void PlayerWindow::initHelp()
     this->hotkeys[Qt::Key_P] = std::bind(&PlayerWindow::togglePowerOffOnFinish, this);
     this->hotkeys[Qt::Key_A] = std::bind(&PlayerWindow::planLess, this);
     this->hotkeys[Qt::Key_S] = std::bind(&PlayerWindow::planMore, this);
+    this->hotkeys[Qt::Key_Print] = std::bind(&PlayerWindow::takeScreenshot, this);
+    this->hotkeys[Qt::Key_Pause] = std::bind(&PlayerWindow::tweet, this);
 }
 
 void PlayerWindow::initOpeningEnding()
@@ -832,11 +836,58 @@ void PlayerWindow::endingStartsHere()
     }
 }
 
+QString PlayerWindow::hookPath(const QString& hookName)
+{
+    return QFileInfo(qApp->arguments()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
+}
+
 void PlayerWindow::runHook(const QString& hookName)
 {
-    auto hookPath = QFileInfo(qApp->arguments()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
-
     QProcess hook;
-    hook.start(hookPath);
+    hook.start(this->hookPath(hookName));
     hook.waitForFinished();
+}
+
+QString PlayerWindow::screenshotsDir()
+{
+    return QStandardPaths::writableLocation(QStandardPaths::DataLocation) + "/screenshots/" + this->file;
+}
+
+void PlayerWindow::takeScreenshot()
+{
+    QString screenshotFileDir = this->screenshotsDir();
+    QDir dir(screenshotFileDir);
+    if (!dir.exists())
+    {
+        dir.mkpath(".");
+    }
+
+    QString screenshotFileName;
+    int screenshotIndex = 0;
+    do
+    {
+        screenshotFileName = screenshotFileDir + QString("/%1.jpg").arg(screenshotIndex++, 4, 10, QChar('0'));
+    }
+    while (QFileInfo(screenshotFileName).exists());
+
+    auto screenshotFileNameUtf8 = screenshotFileName.toUtf8();
+    const char* screenshotCmd[] = {"screenshot_to_file", screenshotFileNameUtf8.constData(), NULL};
+    mpv_command(this->mpv, screenshotCmd);
+
+    const char* showTextCmd[] = {"show_text", "Screenshot taken", NULL};
+    mpv_command(this->mpv, showTextCmd);
+}
+
+void PlayerWindow::tweet()
+{
+    QSettings settings;
+    settings.beginGroup("Twitter");
+
+    QProcess* tweetPy = new QProcess(this);
+    tweetPy->start(this->hookPath("tweet.py"),
+                   QStringList() << this->screenshotsDir()
+                                 << settings.value("consumer_key").toString()
+                                 << settings.value("consumer_secret").toString()
+                                 << settings.value("access_token_key").toString()
+                                 << settings.value("access_token_secret").toString());
 }

@@ -111,7 +111,10 @@ private:
     QMap<QString, QString> withDownloadedAt(QMap<QString, QString> args, QString file);
 
     // Hooks
+    QString hookPath(const QString& hookName);
     void runHook(const QString& hookName);
+
+    QString screenshotsDir();
 
 
 private slots:
@@ -131,6 +134,9 @@ private slots:
 
     void openingEndsHere();
     void endingStartsHere();
+
+    void takeScreenshot();
+    void tweet();
 };
 
 #endif // PLAYERWINDOW_H
