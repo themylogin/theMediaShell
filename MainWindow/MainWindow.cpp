@@ -4,6 +4,7 @@
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QStringList>
+#include <QTimer>
 
 #include "MediaDb.h"
 #include "MainWindow/MpdDialog.h"
@@ -188,22 +189,30 @@ void MainWindow::mediaActivated(QModelIndex media)
             }
         }
 
-        bool canPlay = true;
         this->mpdWasPlaying = false;
         auto state = this->mpd->getState();
+        auto play = [=](){
+            PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist);
+            connect(playerWindow, SIGNAL(closing(bool)), this, SLOT(playerWindowClosing(bool)));
+        };
         if (state.playing)
         {
             MpdDialog dialog(playlistTitle, this->mpd, this);
             Utils::setStyleSheetFromFile(&dialog, "://QMessageBox.qss");
             dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
             Utils::resizeMessageBox(&dialog);
-            canPlay = dialog.canPlay(&this->mpdWasPlaying);
+            bool canPlay = dialog.canPlay(&this->mpdWasPlaying);
+            // Wait for our slow computer to free ALSA device
+            QTimer::singleShot(5000, [=](){
+                if (canPlay)
+                {
+                    play();
+                }
+            });
         }
-
-        if (canPlay)
+        else
         {
-            PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist);
-            connect(playerWindow, SIGNAL(closing(bool)), this, SLOT(playerWindowClosing(bool)));
+            play();
         }
     }
 }
