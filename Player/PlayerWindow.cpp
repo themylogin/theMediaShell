@@ -744,6 +744,9 @@ void PlayerWindow::handleMpvEvent(mpv_event* event)
         if (property_event->name == QLatin1String("length"))
         {
             this->duration = *((double*)property_event->data);
+
+            MediaDb::getInstance().set(this->file, "duration", this->duration);
+            this->playlist->setDurationFor(this->file, this->duration);
         }
 
         if (property_event->name == QLatin1String("pause"))
