@@ -117,6 +117,7 @@ void MpdClient::setPlaying(bool playing, int remaining, const char* artist, cons
     {
         if (this->state.playing)
         {
+            sleep(5); // Wait for our slow computer to free ALSA device
             this->state.playing = false;
             emit stateChanged(this->state);
         }
