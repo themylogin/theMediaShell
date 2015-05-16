@@ -11,6 +11,7 @@
 namespace Utils
 {
     bool isMovie(QString path);
+    bool isMovieDiscDirectory(QString name);
 
     bool isWatched(float progress, float duration);
 

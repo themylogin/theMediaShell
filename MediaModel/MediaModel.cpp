@@ -147,7 +147,14 @@ bool MediaModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent
     // Directory
     if (this->fsModel->isDir(sourceIndex))
     {
-        return this->anyChildrenIsMovie(sourceIndex) > 0;
+        if (this->isMovieDiscDirectory(sourceIndex))
+        {
+            return false;
+        }
+        else
+        {
+            return this->anyChildrenIsMovie(sourceIndex) > 0;
+        }
     }
     // File
     return this->isMovie(sourceIndex);
@@ -156,6 +163,11 @@ bool MediaModel::filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent
 bool MediaModel::isMovie(const QModelIndex& sourceIndex) const
 {
     return Utils::isMovie(this->fsModel->filePath(sourceIndex));
+}
+
+bool MediaModel::isMovieDiscDirectory(const QModelIndex& sourceIndex) const
+{
+    return Utils::isMovieDiscDirectory(this->fsModel->fileName(sourceIndex));
 }
 
 bool MediaModel::anyChildrenIsMovie(const QModelIndex& sourceIndex) const
@@ -177,6 +189,10 @@ bool MediaModel::anyChildrenIsMovie(const QModelIndex& sourceIndex) const
         QModelIndex sourceChildIndex = this->fsModel->index(i, 0, sourceIndex);
         if (this->fsModel->isDir(sourceChildIndex))
         {
+            if (this->isMovieDiscDirectory(sourceChildIndex))
+            {
+                return true;
+            }
             if (this->anyChildrenIsMovie(sourceChildIndex))
             {
                 return true;

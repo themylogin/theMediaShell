@@ -25,6 +25,7 @@ private:
     QFileSystemModel* fsModel;
 
     bool isMovie(const QModelIndex& sourceIndex) const;
+    bool isMovieDiscDirectory(const QModelIndex& sourceIndex) const;
     bool anyChildrenIsMovie(const QModelIndex& sourceIndex) const;
 
     void notifyRowUpdate(QString path);

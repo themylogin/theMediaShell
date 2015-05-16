@@ -40,6 +40,18 @@ namespace Utils
         }
 
         return false;
+    }    
+
+    bool isMovieDiscDirectory(QString name)
+    {
+        static QStringList names;
+        if (names.isEmpty())
+        {
+            names << "BDMV"
+                  << "VIDEO_TS";
+        }
+
+        return names.contains(name);
     }
 
     bool isWatched(float progress, float duration)

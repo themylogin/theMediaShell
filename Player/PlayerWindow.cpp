@@ -627,9 +627,29 @@ void PlayerWindow::createMpv(const QString& file)
 
     mpv_initialize(this->mpv);
 
-    auto fileUtf8 = file.toUtf8();
-    const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
-    mpv_command(this->mpv, loadCmd);
+    if (QFileInfo(file).isDir())
+    {
+        if (QFileInfo(file + "/BDMV").isDir())
+        {
+            auto bdFile = "bd:///" + file;
+            auto fileUtf8 = bdFile.toUtf8();
+            const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
+            mpv_command(this->mpv, loadCmd);
+        }
+        if (QFileInfo(file + "/VIDEO_TS").isDir())
+        {
+            auto dvdFile = "dvd:///" + file + "/VIDEO_TS";
+            auto fileUtf8 = dvdFile.toUtf8();
+            const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
+            mpv_command(this->mpv, loadCmd);
+        }
+    }
+    else
+    {
+        auto fileUtf8 = file.toUtf8();
+        const char* loadCmd[] = {"loadfile", fileUtf8.constData(), NULL};
+        mpv_command(this->mpv, loadCmd);
+    }
 
     mpv_set_option_string(this->mpv, "idle", "no");
 }
