@@ -12,7 +12,7 @@ from tempfile import NamedTemporaryFile
 import twitter
 
 def main(directory, consumer_key, consumer_secret, access_token_key, access_token_secret):
-    subprocess.call(["gwenview", directory])
+    subprocess.call(["xnview", directory])
     
     images = [x for x in os.listdir(directory) if x.endswith(b".jpg")]
     if not images:
@@ -57,7 +57,7 @@ def main(directory, consumer_key, consumer_secret, access_token_key, access_toke
 
         im.save(collage_path)
 
-    subprocess.call(["gwenview", collage_path])
+    subprocess.call(["xnview", collage_path])
 
     f = NamedTemporaryFile()
     f.write(os.path.basename(directory))
