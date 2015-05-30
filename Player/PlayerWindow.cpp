@@ -597,6 +597,8 @@ void PlayerWindow::play()
 
 void PlayerWindow::createMpv(const QString& file)
 {
+    setlocale(LC_NUMERIC, "C");
+
     this->mpv = mpv_create();
 
     int64_t wid = this->mpvContainer->winId();
