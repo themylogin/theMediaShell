@@ -1,16 +1,13 @@
 #include "MainWindow.h"
 
-#include <QElapsedTimer>
 #include <QFile>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QProcess>
 #include <QStringList>
 
-#include <alsa/asoundlib.h>
-
 #include "MediaDb.h"
-#include "MainWindow/MpdDialog.h"
+#include "Mpd/MpdDialog.h"
 #include "Player/PlayerWindow.h"
 #include "Utils.h"
 
@@ -40,7 +37,7 @@ MainWindow::MainWindow(QString mediaPath, QWidget* parent)
     this->setCentralWidget(this->view);
 
     QThread* mpdThread = new QThread;
-    this->mpd = new MpdClient();
+    this->mpd = new MpdClient;
     mpd->moveToThread(mpdThread);
     connect(mpdThread, SIGNAL(started()), mpd, SLOT(run()));
     mpdThread->start();
@@ -205,53 +202,12 @@ void MainWindow::mediaActivated(QModelIndex media)
             }
         }
 
-        this->mpdWasPlaying = false;
-        auto state = this->mpd->getState();
-        auto play = [=](){
-            PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist);
+        this->mpdWasPlaying = this->mpd->getState().playing;
+        if (MpdDialog::waitMusicOver(playlistTitle, this->mpd, true, &this->mpdWasPlaying, this))
+        {
+            PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist,
+                                                          this->mpd, &this->mpdWasPlaying);
             connect(playerWindow, SIGNAL(closing(bool)), this, SLOT(playerWindowClosing(bool)));
-        };
-        if (state.playing)
-        {
-            MpdDialog dialog(playlistTitle, this->mpd, this);
-            Utils::setStyleSheetFromFile(&dialog, "://QMessageBox.qss");
-            dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
-            Utils::resizeMessageBox(&dialog);
-            bool canPlay = dialog.canPlay(&this->mpdWasPlaying);
-            // Wait for our slow computer to free ALSA device
-            if (canPlay)
-            {
-                QElapsedTimer timer;
-                timer.start();
-                while (true)
-                {
-                    int err;
-                    snd_pcm_t* handle;
-                    if ((err = snd_pcm_open(&handle, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, 0)) < 0)
-                    {
-                        if (timer.elapsed() > 5000)
-                        {
-                            QMessageBox errorBox;
-                            Utils::setStyleSheetFromFile(&errorBox, "://QMessageBox.qss");
-                            errorBox.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
-                            errorBox.setText(QString("Unable to open ALSA device: %1").arg(snd_strerror(err)));
-                            Utils::resizeMessageBox(&errorBox);
-                            errorBox.exec();
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        snd_pcm_close(handle);
-                        play();
-                        break;
-                    }
-                }
-            }
-        }
-        else
-        {
-            play();
         }
     }
 }

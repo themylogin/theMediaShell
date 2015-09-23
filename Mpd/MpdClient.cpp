@@ -2,9 +2,15 @@
 
 #include <unistd.h>
 
+#include <alsa/asoundlib.h>
 #include <mpd/client.h>
 
+#include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QMessageBox>
 #include <QMetaType>
+
+#include "Utils.h"
 
 MpdClient::MpdClient(QObject *parent) :
     QObject(parent)
@@ -91,9 +97,41 @@ void MpdClient::run()
     }
 }
 
-void MpdClient::pause()
+void MpdClient::pause(bool waitAlsa)
 {
     this->needsPause = true;
+
+    if (waitAlsa)
+    {
+        // Wait for our slow computer to free ALSA device
+        QElapsedTimer timer;
+        timer.start();
+        while (true)
+        {
+            QCoreApplication::processEvents();
+
+            int err;
+            snd_pcm_t* handle;
+            if ((err = snd_pcm_open(&handle, "plughw:0,0", SND_PCM_STREAM_PLAYBACK, 0)) < 0)
+            {
+                if (timer.elapsed() > 5000)
+                {
+                    QMessageBox errorBox;
+                    Utils::setStyleSheetFromFile(&errorBox, "://QMessageBox.qss");
+                    errorBox.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+                    errorBox.setText(QString("Unable to open ALSA device: %1").arg(snd_strerror(err)));
+                    Utils::resizeMessageBox(&errorBox);
+                    errorBox.exec();
+                    return;
+                }
+            }
+            else
+            {
+                snd_pcm_close(handle);
+                return;
+            }
+        }
+    }
 }
 
 void MpdClient::resume()

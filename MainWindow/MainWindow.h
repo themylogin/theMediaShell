@@ -6,7 +6,7 @@
 #include <QTreeView>
 
 #include "MediaModel/MediaModel.h"
-#include "MpdClient.h"
+#include "Mpd/MpdClient.h"
 
 class MainWindow : public QMainWindow
 {

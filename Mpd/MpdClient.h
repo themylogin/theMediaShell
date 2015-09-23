@@ -26,7 +26,7 @@ signals:
 public slots:
     void run();
 
-    void pause();
+    void pause(bool waitAlsa = true);
     void resume();
 
 private:

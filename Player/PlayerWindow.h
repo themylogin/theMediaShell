@@ -16,6 +16,7 @@
 
 #include "mpv/client.h"
 
+#include "Mpd/MpdClient.h"
 #include "Player/PlaylistModel.h"
 
 class PlayerWindow : public QMainWindow
@@ -23,7 +24,9 @@ class PlayerWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist, QWidget* parent = 0);
+    PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist,
+                 MpdClient* mpd, bool* mpdWasPlaying,
+                 QWidget* parent = 0);
     ~PlayerWindow();
 
 signals:
@@ -39,6 +42,7 @@ protected:
 
 private:
     QString playlistName;
+    QString playlistTitle;
 
     // Sidebar
     QWidget* sidebar;
@@ -110,6 +114,10 @@ private:
     QMap<QString, QString> withProgresDuration(QMap<QString, QString> args);
     QMap<QString, QString> withDownloadedAt(QMap<QString, QString> args, QString file);
 
+    // MPD
+    MpdClient* mpd;
+    bool* mpdWasPlaying;
+
     // Hooks
     QString hookPath(const QString& hookName);
     void runHook(const QString& hookName);
@@ -127,6 +135,7 @@ private slots:
     // Player
     void distractFocusFromMpvContainer();
 
+    void togglePause();
     void stop();
 
     void planLess();

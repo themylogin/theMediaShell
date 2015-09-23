@@ -29,12 +29,16 @@
 
 #include "Player/PlaylistItem.h"
 #include "MediaDb.h"
+#include "Mpd/MpdDialog.h"
 #include "Utils.h"
 
-PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist, QWidget* parent)
+PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringList playlist,
+                           MpdClient* mpd, bool* mpdWasPlaying,
+                           QWidget* parent)
     : QMainWindow(parent)
 {    
     this->playlistName = playlistName;
+    this->playlistTitle = playlistTitle;
 
     QPalette pal = this->palette();
     pal.setColor(QPalette::Background, Qt::black);
@@ -54,6 +58,9 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
     }
 
     this->initThemylog();
+
+    this->mpd = mpd;
+    this->mpdWasPlaying = mpdWasPlaying;
 
     this->play();
 }
@@ -276,6 +283,7 @@ void PlayerWindow::initHelp()
     this->hotkeys[Qt::Key_P] = std::bind(&PlayerWindow::togglePowerOffOnFinish, this);
     this->hotkeys[Qt::Key_A] = std::bind(&PlayerWindow::planLess, this);
     this->hotkeys[Qt::Key_S] = std::bind(&PlayerWindow::planMore, this);
+    this->hotkeys[Qt::Key_Space] = std::bind(&PlayerWindow::togglePause, this);
     this->hotkeys[Qt::Key_Print] = std::bind(&PlayerWindow::takeScreenshot, this);
     this->hotkeys[Qt::Key_Pause] = std::bind(&PlayerWindow::tweet, this);
 }
@@ -815,6 +823,35 @@ void PlayerWindow::distractFocusFromMpvContainer()
     if (this->isActiveWindow())
     {
         QCursor::setPos(0, 0);
+    }
+}
+
+void PlayerWindow::togglePause()
+{
+    int paused;
+    if (mpv_get_property(this->mpv, "pause", MPV_FORMAT_FLAG, &paused) < 0)
+    {
+        return;
+    }
+
+    if (paused)
+    {
+        if (MpdDialog::waitMusicOver(this->playlistTitle, this->mpd, false, this->mpdWasPlaying, this))
+        {
+            paused = 0;
+            mpv_set_property(this->mpv, "pause", MPV_FORMAT_FLAG, &paused);
+        }
+    }
+    else
+    {
+        paused = 1;
+        mpv_set_property(this->mpv, "pause", MPV_FORMAT_FLAG, &paused);
+
+        // Nobody needs this shit
+        // if (*this->mpdWasPlaying)
+        // {
+        //     this->mpd->resume();
+        // }
     }
 }
 

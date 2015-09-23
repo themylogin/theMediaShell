@@ -2,7 +2,7 @@
 
 #include "Utils.h"
 
-MpdDialog::MpdDialog(QString movie, MpdClient* mpd, QWidget* parent) :
+MpdDialog::MpdDialog(QString movie, MpdClient* mpd, bool waitAlsa, QWidget* parent) :
     QMessageBox(parent)
 {
     this->setIcon(QMessageBox::Information);
@@ -10,6 +10,7 @@ MpdDialog::MpdDialog(QString movie, MpdClient* mpd, QWidget* parent) :
     this->movie = movie;
 
     this->mpd = mpd;
+    this->waitAlsa = waitAlsa;
     connect(this->mpd, SIGNAL(stateChanged(MpdState)), this, SLOT(mpdStateChanged(MpdState)));
 
     this->pauseButton = this->addButton("Pause it", QMessageBox::ActionRole);
@@ -32,12 +33,28 @@ bool MpdDialog::canPlay(bool* wasPlaying)
 
     if (this->clickedButton() == this->pauseButton)
     {
-        this->mpd->pause();
+        this->mpd->pause(this->waitAlsa);
         return true;
     }
     else
     {
         return !this->mpdState.playing;
+    }
+}
+
+bool MpdDialog::waitMusicOver(QString movie, MpdClient* mpd, bool waitAlsa, bool* wasPlaying, QWidget* parent)
+{
+    if (*wasPlaying)
+    {
+        MpdDialog dialog(movie, mpd, waitAlsa, parent);
+        Utils::setStyleSheetFromFile(&dialog, "://QMessageBox.qss");
+        dialog.setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+        Utils::resizeMessageBox(&dialog);
+        return dialog.canPlay(wasPlaying);
+    }
+    else
+    {
+        return true;
     }
 }
 
@@ -56,7 +73,7 @@ void MpdDialog::mpdStateChanged(MpdState state)
             this->mpdState.title != state.title)
         {
             this->wasPausedByUs = true;
-            this->mpd->pause();
+            this->mpd->pause(this->waitAlsa);
         }
 
         this->mpdState = state;

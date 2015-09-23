@@ -2,6 +2,7 @@ QMessageBox, QMessageBox *
 {
     background-color: rgb(37, 29, 35);    
     color: rgb(80, 80, 80);
+    font: 35px "Segoe UI";
 }
 
 QPushButton

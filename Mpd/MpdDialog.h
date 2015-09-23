@@ -11,8 +11,10 @@ class MpdDialog : public QMessageBox
 {
     Q_OBJECT
 public:
-    explicit MpdDialog(QString movie, MpdClient* mpd, QWidget* parent = 0);
+    explicit MpdDialog(QString movie, MpdClient* mpd, bool waitAlsa, QWidget* parent = 0);
     bool canPlay(bool* wasPlaying);
+
+    static bool waitMusicOver(QString movie, MpdClient* mpd, bool waitAlsa, bool* wasPlaying, QWidget* parent = 0);
 
 signals:
 
@@ -24,6 +26,7 @@ private slots:
 private:
     QString movie;
     MpdClient* mpd;
+    bool waitAlsa;
     MpdState mpdState;
     bool wasPlaying;
     bool wasPausedByUs;
