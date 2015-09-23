@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QKeyEvent>
 #include <QMessageBox>
+#include <QProcess>
 #include <QStringList>
 #include <QTimer>
 
@@ -98,6 +99,19 @@ bool MainWindow::eventFilter(QObject* object, QEvent* event)
             if (keyEvent->key() == Qt::Key_F5)
             {
                 this->model->forceUpdate();
+            }
+
+            if (keyEvent->key() == Qt::Key_Space)
+            {
+                auto index = this->view->currentIndex();
+                if (!this->model->isDir(index))
+                {
+                    index = index.parent();
+                }
+                if (index.isValid())
+                {
+                    QProcess::startDetached("urxvt", QStringList() << "-e" << "mc" << this->model->filePath(index));
+                }
             }
 
             if (keyEvent->key() == Qt::Key_Delete)
