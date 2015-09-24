@@ -44,7 +44,7 @@ bool MpdDialog::canPlay(bool* wasPlaying)
 
 bool MpdDialog::waitMusicOver(QString movie, MpdClient* mpd, bool waitAlsa, bool* wasPlaying, QWidget* parent)
 {
-    if (*wasPlaying)
+    if (mpd->getState().playing)
     {
         MpdDialog dialog(movie, mpd, waitAlsa, parent);
         Utils::setStyleSheetFromFile(&dialog, "://QMessageBox.qss");
@@ -54,6 +54,10 @@ bool MpdDialog::waitMusicOver(QString movie, MpdClient* mpd, bool waitAlsa, bool
     }
     else
     {
+        if (wasPlaying)
+        {
+            *wasPlaying = false;
+        }
         return true;
     }
 }

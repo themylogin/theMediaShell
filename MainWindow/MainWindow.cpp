@@ -202,7 +202,6 @@ void MainWindow::mediaActivated(QModelIndex media)
             }
         }
 
-        this->mpdWasPlaying = this->mpd->getState().playing;
         if (MpdDialog::waitMusicOver(playlistTitle, this->mpd, true, &this->mpdWasPlaying, this))
         {
             PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist,

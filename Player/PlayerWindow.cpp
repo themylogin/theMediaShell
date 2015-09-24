@@ -836,9 +836,11 @@ void PlayerWindow::togglePause()
 
     if (paused)
     {
-        if (MpdDialog::waitMusicOver(this->playlistTitle, this->mpd, false, this->mpdWasPlaying, this))
+        bool wasPlaying;
+        if (MpdDialog::waitMusicOver(this->playlistTitle, this->mpd, false, &wasPlaying, this))
         {
             paused = 0;
+            *this->mpdWasPlaying = *this->mpdWasPlaying | wasPlaying;
             mpv_set_property(this->mpv, "pause", MPV_FORMAT_FLAG, &paused);
         }
     }
