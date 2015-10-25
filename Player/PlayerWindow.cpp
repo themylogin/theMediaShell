@@ -8,8 +8,6 @@
 #include <ctime>
 #include <iostream>
 
-#include <qapplication.h>
-
 #include <QCloseEvent>
 #include <QDesktopServices>
 #include <QDir>
@@ -27,6 +25,7 @@
 
 #include <QtConcurrent/QtConcurrentRun>
 
+#include "Hook.h"
 #include "Player/PlaylistItem.h"
 #include "MediaDb.h"
 #include "Mpd/MpdDialog.h"
@@ -595,7 +594,7 @@ void PlayerWindow::play()
     {
         if (this->powerOffOnFinish)
         {
-            this->runHook("power-off");
+            Hook::run("power-off");
         }
 
         emit this->closing(this->powerOffOnFinish);
@@ -900,18 +899,6 @@ void PlayerWindow::endingStartsHere()
     }
 }
 
-QString PlayerWindow::hookPath(const QString& hookName)
-{
-    return QFileInfo(qApp->arguments()[0]).absoluteDir().absolutePath() + "/hooks/" + hookName;
-}
-
-void PlayerWindow::runHook(const QString& hookName)
-{
-    QProcess hook;
-    hook.start(this->hookPath(hookName));
-    hook.waitForFinished();
-}
-
 QString PlayerWindow::screenshotsDir()
 {
     return QStandardPaths::writableLocation(QStandardPaths::DataLocation) + "/screenshots/" + this->file;
@@ -948,7 +935,7 @@ void PlayerWindow::tweet()
     settings.beginGroup("Twitter");
 
     QProcess* tweetPy = new QProcess(this);
-    tweetPy->start(this->hookPath("tweet.py"),
+    tweetPy->start(Hook::path("tweet.py"),
                    QStringList() << this->screenshotsDir()
                                  << settings.value("consumer_key").toString()
                                  << settings.value("consumer_secret").toString()
