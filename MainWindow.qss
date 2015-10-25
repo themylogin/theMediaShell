@@ -85,6 +85,11 @@ QTreeView::branch:open:has-children:!has-siblings {
 }
 
 QStatusBar {
-    font: 35px "Segoe UI";
+    background-color: rgb(17, 9, 15);
+}
+QStatusBar QLabel {
+    background-color: rgb(0, 138, 0);
     color: rgb(240, 240, 240);
+    font: 35px "Segoe UI";
+    padding-top: -5px;
 }

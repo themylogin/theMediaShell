@@ -4,8 +4,10 @@
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QProcess>
+#include <QStatusBar>
 #include <QStringList>
 
+#include "Hook.h"
 #include "MediaDb.h"
 #include "Mpd/MpdDialog.h"
 #include "Player/PlayerWindow.h"
@@ -41,6 +43,16 @@ MainWindow::MainWindow(QString mediaPath, QWidget* parent)
     mpd->moveToThread(mpdThread);
     connect(mpdThread, SIGNAL(started()), mpd, SLOT(run()));
     mpdThread->start();
+
+    this->inPlayerSession = false;
+    this->playerSessionCountdown = new PlayerSessionCountdown(5, this);
+    connect(this->playerSessionCountdown, SIGNAL(message(QString)), this, SLOT(playerSessionMessage(QString)));
+    connect(this->playerSessionCountdown, SIGNAL(timedOut()), this, SLOT(playerSessionFinished()));
+
+    this->statusBarLabel = new QLabel(this);
+    this->statusBarLabel->setAlignment(Qt::AlignCenter);
+    this->statusBar()->addWidget(this->statusBarLabel, 1);
+    this->statusBar()->hide();
 }
 
 bool MainWindow::eventFilter(QObject* object, QEvent* event)
@@ -54,6 +66,9 @@ bool MainWindow::eventFilter(QObject* object, QEvent* event)
                 this->focusFirstItemConnected = false;
                 disconnect(this->model, SIGNAL(layoutChanged()), this, SLOT(focusFirstItem()));
             }
+
+            this->playerSessionCountdown->stop();
+            this->statusBar()->hide();
 
             QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
 
@@ -204,6 +219,12 @@ void MainWindow::mediaActivated(QModelIndex media)
 
         if (MpdDialog::waitMusicOver(playlistTitle, this->mpd, true, &this->mpdWasPlaying, this))
         {
+            if (!this->inPlayerSession)
+            {
+                this->inPlayerSession = true;
+                Hook::run("pre-player-session");
+            }
+
             PlayerWindow* playerWindow = new PlayerWindow(playlistName, playlistTitle, playlist,
                                                           this->mpd, &this->mpdWasPlaying);
             connect(playerWindow, SIGNAL(closing(bool)), this, SLOT(playerWindowClosing(bool)));
@@ -211,13 +232,36 @@ void MainWindow::mediaActivated(QModelIndex media)
     }
 }
 
-void MainWindow::playerWindowClosing(bool poweringOff)
+void MainWindow::playerWindowClosing(bool powerOff)
 {
-    if (!poweringOff)
+    if (powerOff)
     {
-        if (this->mpdWasPlaying)
-        {
-            this->mpd->resume();
-        }
+        this->inPlayerSession = false;
+        Hook::run("post-player-session");
+
+        Hook::run("power-off");
+    }
+    else
+    {
+        this->playerSessionCountdown->start();
+    }
+}
+
+void MainWindow::playerSessionMessage(QString message)
+{
+    this->statusBarLabel->setText(message);
+    this->statusBar()->show();
+}
+
+void MainWindow::playerSessionFinished()
+{
+    this->statusBar()->hide();
+
+    this->inPlayerSession = false;
+    Hook::run("post-player-session");
+
+    if (this->mpdWasPlaying)
+    {
+        this->mpd->resume();
     }
 }

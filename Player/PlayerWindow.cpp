@@ -592,11 +592,6 @@ void PlayerWindow::play()
     }
     else
     {
-        if (this->powerOffOnFinish)
-        {
-            Hook::run("power-off");
-        }
-
         emit this->closing(this->powerOffOnFinish);
         this->close();
     }

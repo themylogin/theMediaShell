@@ -20,7 +20,8 @@ SOURCES += MediaModel/MediaModel.cpp \
     Mpd/MpdDialog.cpp \
     MainWindow/MainWindow.cpp \
     Mpd/MpdClient.cpp \
-    Hook.cpp
+    Hook.cpp \
+    MainWindow/PlayerSessionCountdown.cpp
 
 HEADERS  += MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     MediaModel/Helper/QFileSystemProxyModelMixin.h \
@@ -34,7 +35,8 @@ HEADERS  += MediaModel/Helper/QFileSystemModelWithMappedColumns.h \
     Mpd/MpdDialog.h \
     MainWindow/MainWindow.h \
     Mpd/MpdClient.h \
-    Hook.h
+    Hook.h \
+    MainWindow/PlayerSessionCountdown.h
 
 FORMS    +=
 

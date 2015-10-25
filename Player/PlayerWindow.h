@@ -30,7 +30,7 @@ public:
     ~PlayerWindow();
 
 signals:
-    void closing(bool poweringOff);
+    void closing(bool powerOff);
 
 public slots:
     void showSidebar();
@@ -117,10 +117,6 @@ private:
     // MPD
     MpdClient* mpd;
     bool* mpdWasPlaying;
-
-    // Hooks
-    QString hookPath(const QString& hookName);
-    void runHook(const QString& hookName);
 
     QString screenshotsDir();
 

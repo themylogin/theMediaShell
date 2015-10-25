@@ -2,9 +2,12 @@
 #define MAINWINDOW_H
 
 #include <QEvent>
+#include <QLabel>
 #include <QMainWindow>
+#include <QTimer>
 #include <QTreeView>
 
+#include "MainWindow/PlayerSessionCountdown.h"
 #include "MediaModel/MediaModel.h"
 #include "Mpd/MpdClient.h"
 
@@ -27,11 +30,17 @@ private:
 
     bool focusFirstItemConnected;
 
+    bool inPlayerSession;
+    QLabel* statusBarLabel;
+    PlayerSessionCountdown* playerSessionCountdown;
+
 private slots:
     void focusFirstItem();
     void scrollToCurrentItem();
     void mediaActivated(QModelIndex media);
-    void playerWindowClosing(bool poweringOff);
+    void playerWindowClosing(bool powerOff);
+    void playerSessionMessage(QString message);
+    void playerSessionFinished();
 };
 
 #endif // MAINWINDOW_H
