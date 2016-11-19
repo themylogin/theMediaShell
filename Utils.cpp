@@ -28,6 +28,7 @@ namespace Utils
                        << ".mp4"
                        << ".ts"
                        << ".webm"
+                       << ".mpg"
                        << ".wmv";
         }
 
