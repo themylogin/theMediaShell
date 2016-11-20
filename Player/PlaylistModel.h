@@ -68,7 +68,7 @@ public:
             for (int i = 1; i <= index.row(); i++)
             {
                 float duration = this->playlist[index.row()]->duration;
-                if (isnan(duration))
+                if (std::isnan(duration))
                 {
                     return QVariant("...");
                 }
