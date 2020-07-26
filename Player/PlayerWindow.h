@@ -39,6 +39,7 @@ public slots:
 
 protected:
     bool event(QEvent* event);
+    bool nativeEvent(const QByteArray& eventType, void* message, long* result);
 
 private:
     QString playlistName;

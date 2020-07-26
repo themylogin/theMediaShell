@@ -1,7 +1,7 @@
 #include "PlayerWindow.h"
 
-#include <sys/resource.h>
 #include <sys/time.h>
+#include <windows.h>
 
 #include <algorithm>
 #include <cmath>
@@ -35,7 +35,7 @@ PlayerWindow::PlayerWindow(QString playlistName, QString playlistTitle, QStringL
                            MpdClient* mpd, bool* mpdWasPlaying,
                            QWidget* parent)
     : QMainWindow(parent)
-{    
+{
     this->playlistName = playlistName;
     this->playlistTitle = playlistTitle;
 
@@ -274,17 +274,25 @@ void PlayerWindow::initHelp()
     this->helpTable->setFixedSize(620, 238);
     this->sidebarLayout->addWidget(this->helpTable);
 
-    this->hotkeys[Qt::Key_Q] = std::bind(&PlayerWindow::stop, this);
-    this->hotkeys[Qt::Key_W] = std::bind(&PlayerWindow::openingEndsHere, this);
-    this->hotkeys[Qt::Key_E] = std::bind(&PlayerWindow::endingStartsHere, this);
-    this->hotkeys[Qt::Key_Y] = std::bind(&PlayerWindow::toggleUpscale, this);
-    this->hotkeys[Qt::Key_O] = std::bind(&PlayerWindow::toggleSidebar, this);
-    this->hotkeys[Qt::Key_P] = std::bind(&PlayerWindow::togglePowerOffOnFinish, this);
-    this->hotkeys[Qt::Key_A] = std::bind(&PlayerWindow::planLess, this);
-    this->hotkeys[Qt::Key_S] = std::bind(&PlayerWindow::planMore, this);
-    this->hotkeys[Qt::Key_Space] = std::bind(&PlayerWindow::togglePause, this);
-    this->hotkeys[Qt::Key_Print] = std::bind(&PlayerWindow::takeScreenshot, this);
-    this->hotkeys[Qt::Key_Pause] = std::bind(&PlayerWindow::tweet, this);
+    int VK_Q = 0x51;
+    int VK_W = 0x57;
+    int VK_E = 0x45;
+    int VK_Y = 0x59;
+    int VK_O = 0x4F;
+    int VK_P = 0x50;
+    int VK_A = 0x41;
+    int VK_S = 0x53;
+    this->hotkeys[VK_Q] = std::bind(&PlayerWindow::stop, this);
+    this->hotkeys[VK_W] = std::bind(&PlayerWindow::openingEndsHere, this);
+    this->hotkeys[VK_E] = std::bind(&PlayerWindow::endingStartsHere, this);
+    this->hotkeys[VK_Y] = std::bind(&PlayerWindow::toggleUpscale, this);
+    this->hotkeys[VK_O] = std::bind(&PlayerWindow::toggleSidebar, this);
+    this->hotkeys[VK_P] = std::bind(&PlayerWindow::togglePowerOffOnFinish, this);
+    this->hotkeys[VK_A] = std::bind(&PlayerWindow::planLess, this);
+    this->hotkeys[VK_S] = std::bind(&PlayerWindow::planMore, this);
+    this->hotkeys[VK_SPACE] = std::bind(&PlayerWindow::togglePause, this);
+    this->hotkeys[VK_PRINT] = std::bind(&PlayerWindow::takeScreenshot, this);
+    this->hotkeys[VK_PAUSE] = std::bind(&PlayerWindow::tweet, this);
 }
 
 void PlayerWindow::initOpeningEnding()
@@ -559,22 +567,44 @@ bool PlayerWindow::event(QEvent* event)
         return true;
     }
 
-    if (event->type() == QEvent::KeyPress)
+    return QWidget::event(event);
+}
+
+bool PlayerWindow::nativeEvent(const QByteArray& eventType, void* message, long* result)
+{
+    MSG* msg = reinterpret_cast<MSG*>(message);
+
+    if (msg->message == WM_SYSKEYDOWN || msg->message == WM_KEYDOWN || msg->message == WM_SYSKEYUP ||
+        msg->message == WM_KEYUP/* || msg->message == WM_CHAR || msg->message == WM_SYSCHAR*/)
     {
-        QKeyEvent* keyEvent = dynamic_cast<QKeyEvent*>(event);
-        int key = keyEvent->key();
-
-        if (this->hotkeys.contains(key))
+        int code;
+        if (msg->message == WM_CHAR || msg->message == WM_SYSCHAR)
         {
-            this->hotkeys[key]();
-            return true;
+            code = 0x41 + tolower(msg->wParam) - 'a';
         }
-
-        Utils::x11KeyEventForChildren(this->mpvContainer->winId(), 1, keyEvent->nativeVirtualKey(), keyEvent->nativeModifiers());
-        Utils::x11KeyEventForChildren(this->mpvContainer->winId(), 0, keyEvent->nativeVirtualKey(), keyEvent->nativeModifiers());
+        else
+        {
+            code = msg->wParam;
+        }
+        if (this->hotkeys.contains(code))
+        {
+            if (msg->message == WM_KEYDOWN)
+            {
+                this->hotkeys[code]();
+            }
+        }
+        else
+        {
+            auto hwnd = FindWindowEx((HWND)this->mpvContainer->winId(), 0, (LPCWSTR)L"mpv", NULL);
+            if (hwnd)
+            {
+                SendMessage(hwnd, msg->message, msg->wParam, msg->lParam);
+            }
+        }
+        return true;
     }
 
-    return QWidget::event(event);
+    return QMainWindow::nativeEvent(eventType, message, result);
 }
 
 void PlayerWindow::play()
@@ -617,7 +647,7 @@ void PlayerWindow::createMpv(const QString& file)
     }
 
     mpv_observe_property(this->mpv, 0, "aid", MPV_FORMAT_STRING);
-    mpv_observe_property(this->mpv, 0, "length", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(this->mpv, 0, "duration", MPV_FORMAT_DOUBLE);
     mpv_observe_property(this->mpv, 0, "pause", MPV_FORMAT_FLAG);
     mpv_observe_property(this->mpv, 0, "playtime-remaining", MPV_FORMAT_DOUBLE);
     mpv_observe_property(this->mpv, 0, "time-pos", MPV_FORMAT_DOUBLE);
@@ -737,54 +767,57 @@ void PlayerWindow::handleMpvEvent(mpv_event* event)
     {
         mpv_event_property* property_event = (mpv_event_property*)event->data;
 
-        if (property_event->name == QLatin1String("aid"))
+        if (property_event->data != 0)
         {
-            if (this->playlistName != "")
+            if (property_event->name == QLatin1String("aid"))
             {
-                MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+                if (this->playlistName != "")
+                {
+                    MediaDb::getInstance().set(this->playlistName, "aid", QString::fromUtf8(*((char**)property_event->data)));
+                }
             }
-        }
 
-        if (property_event->name == QLatin1String("length"))
-        {
-            this->duration = *((double*)property_event->data);
-
-            MediaDb::getInstance().set(this->file, "duration", this->duration);
-            this->playlist->setDurationFor(this->file, this->duration);
-        }
-
-        if (property_event->name == QLatin1String("pause"))
-        {
-            bool paused = *((int*)property_event->data);
-            if (paused != this->paused)
+            if (property_event->name == QLatin1String("duration"))
             {
-                this->paused = paused;
+                this->duration = *((double*)property_event->data);
 
-                QString msg;
-                if (this->paused)
-                {
-                    msg = "pause";
-                }
-                else
-                {
-                    msg = "resume";
-                }
-
-
-                QMap<QString, QString> args;
-                auto file = this->playlist->getFrontItem()->file;
-                this->themylog(msg, file, this->withDownloadedAt(this->withProgresDuration(args), file));
+                MediaDb::getInstance().set(this->file, "duration", this->duration);
+                this->playlist->setDurationFor(this->file, this->duration);
             }
-        }
 
-        if (property_event->name == QLatin1String("playtime-remaining"))
-        {
-            this->remaining = *((double*)property_event->data);
-        }
+            if (property_event->name == QLatin1String("pause"))
+            {
+                bool paused = *((int*)property_event->data);
+                if (paused != this->paused)
+                {
+                    this->paused = paused;
 
-        if (property_event->name == QLatin1String("time-pos"))
-        {
-            this->progress = *((double*)property_event->data);
+                    QString msg;
+                    if (this->paused)
+                    {
+                        msg = "pause";
+                    }
+                    else
+                    {
+                        msg = "resume";
+                    }
+
+
+                    QMap<QString, QString> args;
+                    auto file = this->playlist->getFrontItem()->file;
+                    this->themylog(msg, file, this->withDownloadedAt(this->withProgresDuration(args), file));
+                }
+            }
+
+            if (property_event->name == QLatin1String("playtime-remaining"))
+            {
+                this->remaining = *((double*)property_event->data);
+            }
+
+            if (property_event->name == QLatin1String("time-pos"))
+            {
+                this->progress = *((double*)property_event->data);
+            }
         }
     }
 

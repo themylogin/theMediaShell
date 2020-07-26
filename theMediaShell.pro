@@ -4,13 +4,18 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network widgets x11extras
+QT       += core gui network widgets
 
 TARGET = theMediaShell
 TEMPLATE = app
 
 CONFIG += link_pkgconfig debug
-PKGCONFIG += libavformat libavcodec libavutil x11 mpv libmpdclient alsa
+
+INCLUDEPATH += C:\Users\Professional\Desktop\libmpv
+LIBS += -L"C:\Users\Professional\Desktop\libmpv" -lmpv
+
+INCLUDEPATH += C:\msys64\mingw64\include
+LIBS += -L"C:\msys64\mingw64\lib" -lavformat -lavcodec -lavutil
 
 SOURCES += MediaModel/MediaModel.cpp \
     Application.cpp \
